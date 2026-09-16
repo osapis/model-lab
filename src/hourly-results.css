@@ -1,0 +1,22 @@
+.hourly-results { display: grid; gap: 32px; }
+.hour-section { min-width: 0; }
+.hour-section-heading { margin: 0 0 17px; }
+.hour-section-toggle { display: flex; align-items: center; gap: 14px; width: 100%; min-width: 0; padding: 16px 18px; border: 1px solid #c5dcd1; border-left: 5px solid #278873; border-radius: 9px; background: #eaf4ef; color: #245c47; text-align: left; }
+.hour-section-icon { display: grid; place-items: center; width: 38px; height: 38px; flex-shrink: 0; border-radius: 10px; background: #ffffffba; color: #298371; }
+.hour-section-time { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.hour-section-date { font-size: 12px; font-weight: 550; line-height: 1.5; color: #5b7e6a; font-variant-numeric: tabular-nums; }
+.hour-section-time strong { font-size: 23px; line-height: 1.3; font-weight: 700; letter-spacing: .2px; font-variant-numeric: tabular-nums; }
+.hour-section-count { margin-left: auto; padding: 5px 10px; border: 1px solid #cfe2d7; border-radius: 6px; background: #ffffffb3; font-size: 12px; line-height: 1.6; font-weight: 550; white-space: nowrap; }
+.hour-section-action { display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 500; }
+.hour-section-action svg { transform: rotate(180deg); }
+.hour-section.is-collapsed .hour-section-action svg { transform: none; }
+.hour-section.is-collapsed .hour-section-heading { margin-bottom: 0; }
+.hour-section-toggle:focus-visible { outline: 2px solid #147e67; outline-offset: 3px; }
+@media (max-width: 640px) {
+  .hourly-results { gap: 25px; }
+  .hour-section-toggle { flex-wrap: wrap; gap: 9px; padding: 13px 12px; border-left-width: 4px; }
+  .hour-section-icon { width: 31px; height: 31px; border-radius: 8px; }
+  .hour-section-time strong { font-size: 21px; }
+  .hour-section-count { padding: 3px 7px; font-size: 10px; }
+  .hour-section-action { margin-left: auto; font-size: 11px; }
+}

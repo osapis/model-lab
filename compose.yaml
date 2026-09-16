@@ -1,0 +1,25 @@
+services:
+  model-lab:
+    image: model-lab:local
+    build:
+      context: .
+      target: runtime
+    restart: unless-stopped
+    init: true
+    ports:
+      - "${BIND_ADDRESS:-127.0.0.1}:${PORT:-3000}:3000"
+    environment:
+      NODE_ENV: production
+      HOST: 0.0.0.0
+      PORT: "3000"
+      DATA_DIR: /app/.data
+      ADMIN_TOKEN: "${ADMIN_TOKEN:-}"
+      REQUEST_TIMEOUT_MS: "${REQUEST_TIMEOUT_MS:-}"
+      APP_ORIGIN: "${APP_ORIGIN:-}"
+      COOKIE_SECURE: "${COOKIE_SECURE:-false}"
+    volumes:
+      - model-lab-data:/app/.data
+    stop_grace_period: 45s
+
+volumes:
+  model-lab-data:

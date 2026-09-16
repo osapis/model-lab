@@ -1,0 +1,20 @@
+.retry-info { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; color: #6f867b; font-size: 11px; line-height: 1.75; }
+.retry-info-badge { display: inline-flex; align-items: center; gap: 5px; border: 1px solid #dce7e1; border-radius: 5px; background: #f4f8f5; padding: 3px 7px; color: #657f70; font-size: 10px; font-weight: 500; }
+.retry-info-badge.automatic { color: #986b34; background: #fff7e9; border-color: #f0dfbf; }
+.retry-info-policy { color: #819187; }
+.retry-info-wait { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 4px; color: #977445; }
+.retry-info-wait > svg { flex-shrink: 0; }
+.retry-info-wait time { font-variant-numeric: tabular-nums; }
+.retry-info a.retry-info-link { display: inline-flex; align-items: center; gap: 4px; color: #157b6b; text-decoration: underline; text-decoration-color: #a8cbbf; text-underline-offset: 3px; font-size: inherit; }
+.retry-info a.retry-info-link:hover { color: #075b50; text-decoration-color: currentColor; }
+.retry-info a.retry-info-link:focus-visible { outline: 2px solid #84bfb1; outline-offset: 3px; border-radius: 2px; }
+.retry-info-compact { gap: 6px 10px; font-size: 10px; }
+.retry-info-compact .retry-info-badge { font-size: 10px; padding: 2px 6px; }
+.result-card-body > .retry-info { margin-top: 10px; }
+.modal-inner > .retry-info { margin: 0 25px 16px; }
+.admin-record > .retry-info { margin: 0 20px 15px 39px; }
+.admin-run-detail > .retry-info { margin-top: 16px; }
+@media (max-width: 560px) {
+  .retry-info { gap: 7px 10px; }
+  .admin-record > .retry-info { margin: 0 12px 14px 25px; }
+}

@@ -1,0 +1,8 @@
+# 可选覆盖文件；compose.yaml 本身已默认从当前源码构建。
+# docker compose -f compose.yaml -f compose.build.yaml up -d --build
+services:
+  model-lab:
+    image: model-lab:local
+    build:
+      context: .
+      target: runtime

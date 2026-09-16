@@ -1,0 +1,121 @@
+/* Arrange related metadata on shared rows while letting narrow cards wrap whole fields. */
+.results-grid .result-card .result-provider-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 3px 8px;
+  margin-bottom: 5px;
+}
+.results-grid .result-card .result-provider-heading .provider-caption { margin: 0; }
+.results-grid .result-card .result-provider-heading .status-pill { margin: 0; font-size: 10px; }
+.results-grid .result-card .result-model-info {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+  min-width: 0;
+}
+.results-grid .result-card .result-model-info .model-line {
+  flex: 1 1 110px;
+  min-width: 0;
+  margin: 0;
+}
+.results-grid .result-card .result-model-info .model-reasoning {
+  flex: 0 1 auto;
+  min-width: 0;
+  max-width: 100%;
+  margin: 0 0 0 auto;
+  gap: 3px 5px;
+  font-size: 10px;
+}
+.results-grid .result-card .model-reasoning > strong { font-size: 11px; padding: 1px 6px; }
+.results-grid .result-card .result-prompt-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  min-width: 0;
+  gap: 5px 9px;
+  margin-top: 9px;
+}
+.results-grid .result-card .result-prompt-row .result-prompt-title {
+  flex: 1 1 120px;
+  min-width: 0;
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+}
+.results-grid .result-card .result-prompt-row .retry-info {
+  flex: 0 1 auto;
+  min-width: 0;
+  max-width: 100%;
+  margin: 0 0 0 auto;
+  justify-content: flex-end;
+  gap: 3px 7px;
+}
+.results-grid .result-card .result-prompt-row .retry-info-link { max-width: 100%; overflow-wrap: anywhere; }
+.results-grid:not(.list-layout) .result-card-body { padding: 12px; }
+.results-grid:not(.list-layout) .result-model-time { grid-template-columns: minmax(0, 1fr); gap: 8px; margin-top: 8px; }
+.results-grid:not(.list-layout) .test-timestamp {
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 1px 8px;
+  min-width: 0;
+  width: 100%;
+  padding: 6px 9px;
+  text-align: left;
+}
+.results-grid:not(.list-layout) .test-timestamp .test-timestamp-label { grid-column: 1; grid-row: 1; justify-content: flex-start; font-size: 9px; }
+.results-grid:not(.list-layout) .test-timestamp .test-timestamp-date { grid-column: 1; grid-row: 2; font-size: 11px; }
+.results-grid:not(.list-layout) .test-timestamp .test-timestamp-clock { grid-column: 2; grid-row: 1 / 3; align-self: center; font-size: 18px; }
+.results-grid:not(.list-layout) .card-metrics { margin-top: 9px; gap: 5px 10px; }
+.results-grid:not(.list-layout) .result-card-footer { padding: 6px 12px; gap: 6px 9px; }
+.results-grid:not(.list-layout) .result-card-footer button { min-height: 28px; }
+@media (max-width: 640px) {
+  .results-grid:not(.list-layout) .result-card-body { padding: 8px; }
+  .results-grid .result-card .result-provider-heading { gap: 3px 5px; margin-bottom: 4px; }
+  .results-grid .result-card .result-provider-heading .status-pill { font-size: 8px; }
+  .results-grid:not(.list-layout) .result-title-line .provider-name { font-size: 15px; line-height: 1.35; }
+  .results-grid:not(.list-layout) .result-model-time { gap: 6px; margin-top: 7px; }
+  .results-grid:not(.list-layout) .result-card .result-model-info {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: start;
+    gap: 4px;
+  }
+  .results-grid:not(.list-layout) .result-model-info .model-avatar { display: none; }
+  .results-grid:not(.list-layout) .result-model-info .model-line { min-width: 0; gap: 2px; }
+  .results-grid:not(.list-layout) .result-model-info .model-line strong { font-size: 11px; line-height: 1.55; }
+  .results-grid:not(.list-layout) .result-card .model-reasoning { margin: 0; gap: 0; }
+  .results-grid:not(.list-layout) .result-card .model-reasoning > strong { padding: 1px 4px; font-size: 10px; line-height: 1.45; white-space: nowrap; }
+  /* Labels remain available to assistive technology; their values stay visible. */
+  .results-grid:not(.list-layout) .model-reasoning > span,
+  .results-grid:not(.list-layout) .test-timestamp-caption,
+  .results-grid:not(.list-layout) .metric-label,
+  .results-grid:not(.list-layout) .metric-unit {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+  .results-grid:not(.list-layout) .test-timestamp {
+    display: grid;
+    grid-template-columns: 10px minmax(0, 1fr);
+    gap: 1px 4px;
+    padding: 4px 6px;
+  }
+  .results-grid:not(.list-layout) .test-timestamp .test-timestamp-label { grid-column: 1; grid-row: 1; justify-content: flex-start; gap: 0; align-self: center; font-size: 8px; }
+  .results-grid:not(.list-layout) .test-timestamp .test-timestamp-date { grid-column: 2; grid-row: 1; font-size: 9px; line-height: 1.35; }
+  .results-grid:not(.list-layout) .test-timestamp .test-timestamp-clock { grid-column: 1 / -1; grid-row: 2; font-size: 15px; line-height: 1.25; }
+  .results-grid:not(.list-layout) .result-card .result-prompt-row { margin-top: 6px; gap: 4px 6px; }
+  .results-grid:not(.list-layout) .result-card .result-prompt-row .result-prompt-title { font-size: 11px; flex-basis: 100px; }
+  .results-grid:not(.list-layout) .result-prompt-row .retry-info-initial { display: none; }
+  .results-grid:not(.list-layout) .card-metrics { margin-top: 6px; flex-wrap: wrap; justify-content: space-between; gap: 3px; font-size: 9px; }
+  .results-grid:not(.list-layout) .card-metrics > span { white-space: nowrap; gap: 3px; }
+  .results-grid:not(.list-layout) .card-metrics svg { width: 10px; height: 10px; }
+  .results-grid:not(.list-layout) .card-metrics .run-duration strong { font-size: 11px; }
+  .results-grid:not(.list-layout) .result-card-footer { padding: 3px 7px; gap: 4px; }
+  .results-grid:not(.list-layout) .result-card-footer button { min-height: 32px; }
+}

@@ -1,0 +1,166 @@
+.admin-automation-intro { display: flex; align-items: center; gap: 15px; padding: 20px 23px; border: 1px solid #dce9e2; border-radius: 11px; background: #f0f7f3; }
+.admin-automation-intro-icon { width: 44px; height: 44px; display: grid; place-items: center; border: 1px solid #d3e5dc; border-radius: 11px; background: #fff; color: var(--admin-primary); flex: 0 0 44px; }
+.admin-automation-intro > div { flex: 1; min-width: 0; }
+.admin-automation-intro h2 { font-size: 14px; font-weight: 600; }
+.admin-automation-intro p { margin-top: 4px; font-size: 11px; color: #809087; }
+.admin-schedule-list { display: flex; flex-direction: column; gap: 15px; }
+.admin-schedule-card { border: 1px solid var(--admin-border); border-radius: 9px; padding: 19px; min-width: 0; }
+.admin-schedule-card-heading { display: flex; align-items: center; justify-content: space-between; gap: 15px; }
+.admin-schedule-card-heading > .admin-row-title { flex: 1; }
+.admin-schedule-facts { display: flex; flex-wrap: wrap; gap: 10px 20px; color: #7d9186; font-size: 11px; margin-top: 11px; }
+.admin-schedule-facts > span { display: inline-flex; align-items: center; gap: 5px; }
+.admin-schedule-selection { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 25px; background: #f7faf8; border-radius: 6px; padding: 12px 14px; margin-top: 15px; }
+.admin-schedule-selection > div { display: flex; align-items: flex-start; gap: 8px; color: #6d8375; font-size: 11px; overflow-wrap: anywhere; }
+.admin-schedule-selection svg { flex-shrink: 0; margin-top: 3px; color: #96ab9d; }
+.admin-schedule-times { display: flex; flex-wrap: wrap; gap: 10px 25px; margin-top: 14px; font-size: 10px; color: #92a097; }
+.admin-schedule-times strong { font-weight: 400; color: #657f6e; margin-left: 8px; font-variant-numeric: tabular-nums; }
+.admin-schedule-times > span { overflow-wrap: anywhere; }
+.admin-schedule-cron-rule { display: flex; flex-wrap: wrap; align-items: center; gap: 7px 12px; padding: 11px 13px; margin-top: 13px; border: 1px solid #e0eae3; border-radius: 7px; background: #f6faf7; min-width: 0; }
+.admin-schedule-cron-rule > code { color: #3b795f; font-size: 12px; overflow-wrap: anywhere; }
+.admin-schedule-cron-rule > span { color: #80968a; font-size: 10px; overflow-wrap: anywhere; }
+.admin-schedule-cron-rule > p { flex-basis: 100%; color: #688674; font-size: 11px; line-height: 1.8; overflow-wrap: anywhere; }
+.admin-cron-editor { display: grid; gap: 16px; border: 1px solid #dae8de; background: #fff; padding: 17px; border-radius: 9px; min-width: 0; }
+.admin-cron-preset { display: flex; align-items: flex-start; gap: 10px; width: 100%; text-align: left; background: #f0f8f3; border: 1px solid #cadfd2; border-radius: 7px; padding: 12px; color: #428269; white-space: normal; }
+.admin-cron-preset:hover:not(:disabled) { background: #e8f4ed; border-color: #a8cbb7; }
+.admin-cron-preset > svg { flex-shrink: 0; margin-top: 3px; }
+.admin-cron-preset > span { min-width: 0; }
+.admin-cron-preset strong { display: block; font-size: 12px; font-weight: 550; line-height: 1.8; }
+.admin-cron-preset small { display: block; margin-top: 3px; font-size: 10px; color: #829889; }
+.admin-cron-preset code { display: block; margin-top: 6px; font-size: 11px; color: #5e8b72; overflow-wrap: anywhere; }
+.admin-root .admin-cron-input { font-family: "SFMono-Regular", Consolas, monospace; }
+.admin-cron-preview { padding: 13px; border: 1px solid #e1eae4; border-radius: 7px; background: #f9fcfa; }
+.admin-cron-preview-heading { display: flex; align-items: center; flex-wrap: wrap; justify-content: space-between; gap: 8px; margin-bottom: 10px; }
+.admin-cron-preview-heading > strong { font-size: 11px; font-weight: 550; color: #587b65; }
+.admin-cron-preview-heading > .admin-text-button { font-size: 10px; }
+.admin-cron-preview-status { display: flex; align-items: flex-start; gap: 7px; color: #8a9c90; font-size: 11px; line-height: 1.8; }
+.admin-cron-preview-status > svg { flex-shrink: 0; margin-top: 2px; }
+.admin-cron-description { color: #567c64; font-size: 11px; line-height: 1.9; overflow-wrap: anywhere; }
+.admin-cron-zone { color: #8b9d90; font-size: 10px; line-height: 1.8; margin-top: 7px !important; overflow-wrap: anywhere; }
+.admin-cron-preview ol { display: flex; flex-wrap: wrap; gap: 7px 24px; margin: 9px 0 0; padding-left: 20px; font-size: 11px; line-height: 1.8; color: #5a7e67; font-variant-numeric: tabular-nums; }
+.admin-cron-preview li { padding-left: 2px; }
+.admin-cron-error { color: #a5654b; font-size: 11px; line-height: 1.8; overflow-wrap: anywhere; }
+.admin-automation-warning { display: flex; align-items: flex-start; gap: 6px; padding: 9px 11px; border: 1px solid #eee4d0; border-radius: 6px; margin-top: 12px !important; font-size: 11px; line-height: 1.8; color: #a08453; background: #fcf9f0; overflow-wrap: anywhere; }
+.admin-automation-warning svg { flex-shrink: 0; margin-top: 3px; }
+.admin-schedule-delete { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; border-top: 1px solid #eee5df; margin-top: 15px; padding-top: 13px; }
+.admin-schedule-delete p { font-size: 11px; color: #ab7d6d; }
+.admin-schedule-interval { display: flex; align-items: center; gap: 10px; }
+.admin-schedule-interval > select { flex: 1; }
+.admin-custom-minutes { flex: 0 1 140px; display: flex; align-items: center; gap: 7px; }
+.admin-custom-minutes > input { min-width: 65px; }
+.admin-custom-minutes > span { flex-shrink: 0; font-size: 11px; color: #82968a; font-weight: 400; }
+.admin-schedule-options { border: 1px solid #dfe9e2; border-radius: 7px; padding: 10px 13px 13px; margin: 0; min-width: 0; background: #fff; }
+.admin-schedule-options legend { font-size: 12px; color: #526d5e; padding: 0 5px; }
+.admin-schedule-options legend > span { color: #9bad9f; font-size: 10px; margin-left: 7px; }
+.admin-schedule-option-list { display: flex; flex-direction: column; gap: 4px; max-height: 240px; overflow: auto; }
+.admin-schedule-option-list > label { display: flex; align-items: flex-start; gap: 9px; padding: 9px 2px; cursor: pointer; font-size: 12px; color: #667c6d; }
+.admin-schedule-option-list > label > input { margin-top: 2px; }
+.admin-schedule-option-list > label > span { min-width: 0; overflow-wrap: anywhere; }
+.admin-schedule-option-list small { display: block; margin-top: 3px; font-size: 10px; color: #9aa99f; }
+.admin-schedule-option-list small.admin-choice-paused { color: #9b8256; }
+.admin-schedule-option-list > .admin-muted { padding: 10px 0; font-size: 11px; }
+.admin-schedule-switches { display: flex; flex-wrap: wrap; gap: 12px 25px; margin-top: 20px; }
+.admin-schedule-results-note { font-size: 11px; color: #8a9e91; margin-top: 8px !important; }
+.admin-schedule-save { align-items: center; flex-wrap: wrap; }
+.admin-schedule-save > span { font-size: 11px; color: #8b9e91; margin-right: auto; }
+.admin-schedule-save > span.over-limit { color: #ac7850; }
+.admin-storage-layout { display: grid; grid-template-columns: minmax(0, 1fr) 310px; gap: 22px; align-items: start; }
+.admin-storage-modes { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.admin-storage-mode { display: flex; align-items: center; gap: 10px; padding: 17px 13px; text-align: left; border: 1px solid #dfe8e2; border-radius: 8px; background: #fff; color: #8da496; min-width: 0; }
+.admin-storage-mode:hover:not(:disabled) { border-color: #adcec0; }
+.admin-storage-mode.selected { background: #f4faf7; border-color: #8bbcab; color: var(--admin-primary); }
+.admin-storage-mode > svg { flex-shrink: 0; }
+.admin-storage-mode > span { flex: 1; min-width: 0; }
+.admin-storage-mode strong { display: block; font-size: 12px; color: #426353; font-weight: 550; }
+.admin-storage-mode small { display: block; color: #96a79c; font-size: 10px; margin-top: 4px; }
+.admin-storage-info { padding: 17px; margin-top: 18px; background: #f8faf8; border: 1px solid #e7eee8; border-radius: 8px; }
+.admin-storage-info > div:first-child { display: flex; align-items: flex-start; gap: 9px; font-size: 12px; line-height: 1.85; color: #83998a; }
+.admin-storage-info > div:first-child > svg { flex-shrink: 0; color: #7e9a89; margin-top: 3px; }
+.admin-storage-info p > strong { font-weight: 500; color: #526f5d; }
+.admin-memory-usage { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; margin-top: 19px; padding-top: 16px; border-top: 1px solid #e2eae3; font-size: 10px; color: #91a498; }
+.admin-memory-usage strong { font-weight: 450; color: #6d8a78; font-variant-numeric: tabular-nums; }
+.admin-memory-track { width: 100%; height: 4px; overflow: hidden; border-radius: 4px; background: #e7eee8; }
+.admin-memory-track > span { display: block; height: 100%; min-width: 2px; background: #56a28a; border-radius: inherit; }
+.admin-storage-s3 { margin-top: 19px; }
+.admin-storage-explanation { font-size: 11px; color: #92a299; line-height: 1.8; margin-bottom: 20px !important; }
+.admin-storage-actions { align-items: center; flex-wrap: wrap; gap: 8px; }
+.admin-storage-actions > span { margin-right: auto; font-size: 10px; }
+.admin-storage-test-note { margin-top: 9px !important; color: #99a99e; font-size: 10px; text-align: right; }
+.admin-retention-panel { background: linear-gradient(155deg, #fff 45%, #f8fbf9); }
+.admin-retention-panel .admin-section-heading { margin-bottom: 24px; }
+.admin-retention-panel .admin-step-heading { gap: 10px; }
+.admin-retention-panel .admin-step-heading h2 { font-size: 14px; }
+.admin-retention-panel .admin-step-heading p { font-size: 10px; }
+.admin-retention-input { display: flex; align-items: center; gap: 12px; }
+.admin-retention-input > span { color: #91a69a; font-size: 12px; }
+.admin-retention-presets { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
+.admin-retention-presets > button { border: 1px solid #e1e9e3; border-radius: 5px; background: #fff; font-size: 10px; color: #8b9e91; padding: 4px 9px; }
+.admin-retention-presets > button.selected { border-color: #aacdbf; color: var(--admin-primary); background: #f1f8f4; }
+.admin-retention-explanation { display: flex; align-items: flex-start; gap: 8px; margin-top: 22px; font-size: 11px; color: #8a9f92; line-height: 1.9; }
+.admin-retention-explanation > svg { color: #8da99a; flex-shrink: 0; margin-top: 3px; }
+.admin-retention-save { width: 100%; margin-top: 23px; font-size: 12px; }
+.admin-storage-footnote { display: flex; align-items: flex-start; gap: 9px; padding: 0 6px; color: #9aab9f; font-size: 10px; line-height: 1.9; }
+.admin-storage-footnote > svg { flex-shrink: 0; margin-top: 2px; }
+.admin-auto-retry-panel { background: linear-gradient(130deg, #fff 55%, #f6fbf8); }
+.admin-auto-retry-form { display: flex; align-items: center; flex-wrap: wrap; gap: 20px 28px; }
+.admin-auto-retry-input { flex: 0 1 215px; min-width: 0; }
+.admin-auto-retry-number { display: flex; align-items: center; gap: 10px; }
+.admin-auto-retry-number > input { flex: 1; }
+.admin-auto-retry-number > span { flex-shrink: 0; font-size: 12px; color: #83998a; }
+.admin-auto-retry-presets { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.admin-auto-retry-presets > button { border: 1px solid #dfe8e2; border-radius: 5px; background: #fff; padding: 4px 9px; color: #84988b; font-size: 10px; }
+.admin-auto-retry-presets > button.selected { color: var(--admin-primary); border-color: #accfc0; background: #edf7f1; }
+.admin-auto-retry-explanation { flex: 1 1 250px; color: #7d9285; font-size: 11px; line-height: 1.9; }
+.admin-auto-retry-explanation > p:first-child { color: #4f7761; }
+.admin-auto-retry-explanation > p + p { margin-top: 7px; }
+.admin-auto-retry-form > .admin-button { align-self: flex-end; margin-left: auto; }
+@media (max-width: 1100px) {
+  .admin-storage-layout { grid-template-columns: minmax(0, 1fr) 280px; gap: 18px; }
+  .admin-storage-modes { grid-template-columns: 1fr; gap: 9px; }
+  .admin-storage-mode { padding: 13px; }
+}
+@media (max-width: 850px) {
+  .admin-storage-layout { grid-template-columns: 1fr; }
+  .admin-storage-modes { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .admin-schedule-card-heading { flex-wrap: wrap; }
+  .admin-schedule-card-heading > .admin-row-actions { margin-left: auto; }
+  .admin-automation-intro > .admin-small-badge { display: none; }
+}
+@media (max-width: 560px) {
+  .admin-cron-editor { padding: 12px; gap: 13px; }
+  .admin-cron-preset { padding: 10px; gap: 8px; }
+  .admin-cron-preset strong { font-size: 11px; }
+  .admin-cron-preview { padding: 10px; }
+  .admin-cron-preview ol { display: block; }
+  .admin-cron-preview li + li { margin-top: 5px; }
+  .admin-schedule-cron-rule { padding: 10px; }
+  .admin-schedule-cron-rule > code { font-size: 11px; }
+  .admin-schedule-interval { flex-wrap: wrap; }
+  .admin-schedule-interval > select { flex-basis: 100%; }
+  .admin-custom-minutes { flex: 1 1 100%; }
+  .admin-auto-retry-panel .admin-section-heading { flex-wrap: wrap; }
+  .admin-auto-retry-form { gap: 15px; }
+  .admin-auto-retry-input, .admin-auto-retry-explanation { flex: 1 1 100%; }
+  .admin-auto-retry-form > .admin-button { width: 100%; }
+  .admin-automation-intro { padding: 16px; gap: 12px; align-items: flex-start; }
+  .admin-automation-intro h2 { font-size: 12px; }
+  .admin-automation-intro p { font-size: 10px; }
+  .admin-automation-intro-icon { width: 35px; height: 35px; flex-basis: 35px; border-radius: 9px; }
+  .admin-automation-intro-icon > svg { width: 20px; }
+  .admin-schedule-card { padding: 14px; }
+  .admin-schedule-card-heading { gap: 11px; }
+  .admin-schedule-card-heading > .admin-row-title { flex: 1 1 100%; }
+  .admin-schedule-card-heading > .admin-row-actions { justify-content: flex-start; width: 100%; }
+  .admin-schedule-facts { gap: 7px 14px; font-size: 10px; margin-top: 12px; }
+  .admin-schedule-selection { grid-template-columns: 1fr; padding: 11px; gap: 7px; }
+  .admin-schedule-selection > div { font-size: 10px; }
+  .admin-schedule-times { flex-direction: column; gap: 6px; font-size: 9px; }
+  .admin-schedule-times strong { margin-left: 12px; }
+  .admin-schedule-delete > .admin-row-actions { margin-left: auto; }
+  .admin-schedule-switches { gap: 14px; flex-direction: column; }
+  .admin-schedule-save > span { flex: 1 1 100%; font-size: 10px; }
+  .admin-storage-modes { grid-template-columns: 1fr; }
+  .admin-storage-info { padding: 13px; }
+  .admin-storage-info > div:first-child { font-size: 11px; }
+  .admin-storage-actions > span { flex: 1 1 100%; margin-bottom: 4px; }
+  .admin-storage-layout { gap: 18px; }
+}

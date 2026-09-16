@@ -1,0 +1,9 @@
+{
+  "extends": "../tsconfig.json",
+  "compilerOptions": {
+    "types": ["node", "@cloudflare/workers-types"],
+    "lib": ["ES2023", "DOM", "DOM.Iterable"]
+  },
+  "include": ["./*.ts", "../server", "../shared"],
+  "exclude": ["./*.test.ts"]
+}

@@ -1,0 +1,123 @@
+/* Keep compact browsing and scroll behavior; colors and surfaces come from the original theme. */
+.compact-ui { scroll-behavior: auto; }
+.compact-ui .topbar { position: sticky; top: 0; z-index: 20; height: 58px; padding: 0 28px; }
+.compact-ui .main-content { padding: 20px 28px 12px; max-width: 1780px; }
+.compact-ui .page-heading { margin: 0 0 24px; align-items: center; }
+.compact-ui .page-heading h1 { font-size: 30px; line-height: 1.2; }
+.compact-ui .page-heading p { margin: 7px 0 0; font-size: 12px; line-height: 1.4; }
+.compact-ui .sidebar-bottom { margin-top: auto; }
+.compact-ui .topbar-actions { gap: 3px; }
+.compact-ui .topbar-actions .icon-button { display: grid; place-items: center; width: 40px; height: 40px; padding: 0; border: 0; }
+.compact-ui .topbar-actions .mobile-layout-toggle,
+.compact-ui .topbar-actions .topbar-create { display: none; }
+.compact-ui .section-header { margin-bottom: 12px; }
+.compact-ui .gallery-controls { display: grid; grid-template-columns: minmax(0, 1fr) minmax(200px, .55fr); gap: 10px; margin-bottom: 4px; }
+.compact-ui .filter-row { display: contents; }
+.compact-ui .category-tabs { grid-column: 1 / -1; width: 100%; margin: 0; }
+.compact-ui .category-tabs > button { min-height: 39px; }
+.compact-ui .search-box { height: 42px; width: 100%; min-width: 0; margin: 0; padding: 0 11px; gap: 7px; }
+.compact-ui .search-box input { min-width: 0; font-size: 14px; background: transparent; border: 0; box-shadow: none; }
+.compact-ui .provider-filter { min-width: 0; padding: 0; margin: 0; gap: 0; border: 0; background: transparent; }
+.compact-ui .provider-filter > label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.compact-ui .provider-filter > select { flex: 1; width: 100%; min-width: 0; min-height: 42px; height: 42px; max-width: 100%; padding: 0 28px 0 11px; margin: 0; font-size: 14px; }
+.compact-ui .results-meta { margin: 10px 0; gap: 8px; min-height: 32px; }
+.compact-ui .results-meta > div { gap: 6px; }
+.compact-ui .results-meta select { min-height: 32px; }
+.compact-ui .hourly-results { gap: 19px; }
+.compact-ui .hour-section-heading { margin: 0 0 10px; }
+.compact-ui .hour-section-toggle { padding: 8px 11px; gap: 10px; min-height: 43px; flex-wrap: nowrap; }
+.compact-ui .hour-section-icon { display: none; }
+.compact-ui .hour-section-time { flex: 1; flex-direction: row; flex-wrap: wrap; align-items: baseline; gap: 3px 10px; }
+.compact-ui .hour-section-date { font-size: 11px; }
+.compact-ui .hour-section-time strong { font-size: 15px; line-height: 1.4; }
+.compact-ui .hour-section-count { margin-left: auto; padding: 1px 5px; font-size: 10px; }
+.compact-ui .hour-section-action { margin: 0; font-size: 11px; gap: 4px; }
+.compact-ui .results-grid { align-items: stretch; gap: 16px; }
+.compact-ui .paired-results-grid > .result-model-group { grid-column: span 2; min-width: 0; }
+.compact-ui .paired-results-grid > .result-model-group.is-single { grid-column: span 1; }
+.compact-ui .paired-results-grid > .results-grid.result-model-group { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: inherit; }
+.compact-ui .paired-results-grid > .results-grid.result-model-group.is-single { grid-template-columns: minmax(0, 1fr); }
+.compact-ui .results-grid:not(.list-layout) > .result-card { display: flex; flex-direction: column; align-self: stretch; min-width: 0; height: auto; }
+.compact-ui .results-grid:not(.list-layout) .result-art { aspect-ratio: 900 / 740; flex: 0 0 auto; min-height: 0; height: auto; }
+.compact-ui .results-grid:not(.list-layout) .result-card-body { flex: 1 0 auto; min-width: 0; }
+.compact-ui .results-grid:not(.list-layout) .result-card-footer { flex-shrink: 0; }
+.compact-ui .results-grid .result-card .result-model-time { display: grid; grid-template-columns: minmax(0, 1fr); gap: 7px; margin-top: 8px; }
+.compact-ui .results-grid .result-card .result-model-info { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 5px; align-items: start; }
+.compact-ui .results-grid .result-card .model-reasoning { margin: 0; }
+.compact-ui .results-grid .result-card .model-reasoning > span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.compact-ui .results-grid .result-card .test-timestamp { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 2px 6px; width: 100%; min-width: 0; margin: 0; padding: 5px 7px; }
+.compact-ui .results-grid .result-card .test-timestamp-label { display: none; }
+.compact-ui .results-grid .result-card .test-timestamp-date { font-size: 11px; line-height: 1.4; }
+.compact-ui .results-grid .result-card .test-timestamp-clock { font-size: 15px; line-height: 1.3; }
+.compact-ui .candy-preview-answer { overscroll-behavior-y: auto; }
+.compact-ui .result-pagination { margin-top: 16px; }
+.compact-ui .page-footer { margin: 12px 0 0; padding: 15px 0 8px; }
+.compact-ui .loading { padding: 28px 15px; }
+.compact-ui .modal { max-height: min(90dvh, 920px); }
+.compact-ui .admin-root .admin-page-heading { gap: 10px; margin-bottom: 16px; }
+.compact-ui .admin-root .admin-page-heading h1 { font-size: 26px; }
+.compact-ui .admin-root .admin-page-heading > div > p:last-child { margin-top: 5px; }
+.compact-ui .admin-root .admin-page-actions { margin-top: 0; }
+@media (min-width: 1200px) {
+  .compact-ui .results-grid:not(.list-layout) { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}
+@media (min-width: 641px) and (max-width: 1199px) {
+  .compact-ui .main-content { padding: 18px; }
+  .compact-ui .topbar { padding: 0 18px; }
+  .compact-ui .results-grid:not(.list-layout) { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 640px) {
+  .compact-ui .topbar { height: 52px; padding: 0 12px; gap: 5px; }
+  .compact-ui .breadcrumb { gap: 7px; }
+  .compact-ui .breadcrumb .topbar-product, .compact-ui .breadcrumb > svg { display: none; }
+  .compact-ui .breadcrumb strong { font-size: 15px; }
+  .compact-ui .mobile-menu { width: 34px; height: 38px; padding: 0; justify-content: center; }
+  .compact-ui .topbar-actions .mobile-layout-toggle,
+  .compact-ui .topbar-actions .topbar-create { display: grid; }
+  .compact-ui .main-content { padding: 9px 12px calc(24px + env(safe-area-inset-bottom)); }
+  .compact-ui .has-comparisons .main-content { padding-bottom: calc(88px + env(safe-area-inset-bottom)); }
+  .compact-ui .page-heading { margin: 5px 0 16px; }
+  .compact-ui .page-heading h1 { font-size: 25px; }
+  .compact-ui .page-heading p { font-size: 12px; max-width: none; }
+  .compact-ui .page-heading > .button { display: none; }
+  .compact-ui .page-gallery .page-heading, .compact-ui .gallery-section-header { display: none; }
+  .compact-ui .gallery-controls { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 8px; }
+  .compact-ui .category-tabs { gap: 2px; }
+  .compact-ui .category-tabs > button { flex: 1; justify-content: center; padding: 6px 3px; gap: 3px; font-size: 10px; }
+  .compact-ui .category-tabs > button svg { display: none; }
+  .compact-ui .search-box { height: 40px; padding: 0 9px; gap: 5px; }
+  .compact-ui .search-box > svg { flex-shrink: 0; width: 15px; }
+  .compact-ui .search-box input { font-size: 16px; }
+  .compact-ui .provider-filter > select { height: 40px; min-height: 40px; font-size: 16px; padding-left: 9px; }
+  .compact-ui .results-meta { margin: 7px 0; gap: 4px; min-height: 31px; font-size: 10px; }
+  .compact-ui .results-meta > div { gap: 1px; }
+  .compact-ui .results-meta select { min-height: 32px; font-size: 11px; padding-left: 2px; padding-right: 15px; }
+  .compact-ui .hourly-results { gap: 15px; }
+  .compact-ui .hour-section-heading { margin-bottom: 8px; }
+  .compact-ui .hour-section-toggle { min-height: 40px; padding: 7px 8px; gap: 5px; }
+  .compact-ui .hour-section-time { gap: 2px 7px; }
+  .compact-ui .hour-section-time strong { font-size: 13px; }
+  .compact-ui .hour-section-date { font-size: 10px; }
+  .compact-ui .hour-section-count { font-size: 9px; }
+  .compact-ui .hour-section-action { font-size: 0; gap: 0; }
+  .compact-ui .hour-section-action svg { width: 15px; height: 15px; }
+  .compact-ui .results-grid:not(.list-layout) { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 9px; align-items: stretch; }
+  .compact-ui .results-grid:not(.list-layout) .result-card .result-model-time { margin-top: 7px; gap: 6px; }
+  .compact-ui .results-grid .result-card .result-model-info { gap: 4px; }
+  .compact-ui .results-grid .result-card .test-timestamp { gap: 2px 4px; padding: 4px 5px; }
+  .compact-ui .results-grid .result-card .test-timestamp-date { font-size: 10px; }
+  .compact-ui .results-grid .result-card .test-timestamp-clock { font-size: 12px; }
+  .compact-ui .results-grid:not(.list-layout) .run-state, .compact-ui .results-grid:not(.list-layout) .artifact-missing { overflow: hidden; }
+  .compact-ui .results-grid:not(.list-layout) .run-state p, .compact-ui .results-grid:not(.list-layout) .artifact-missing span { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+  .compact-ui .compare-dock { bottom: calc(12px + env(safe-area-inset-bottom)); }
+  .compact-ui .modal, .compact-ui .modal.wide { max-height: calc(94dvh - env(safe-area-inset-top)); }
+  .compact-ui .modal-footer { padding-bottom: calc(13px + env(safe-area-inset-bottom)); }
+  .compact-ui .toast { bottom: calc(20px + env(safe-area-inset-bottom)); white-space: normal; }
+  .compact-ui .has-comparisons .toast { bottom: calc(76px + env(safe-area-inset-bottom)); }
+  .compact-ui .page-footer { padding: 13px 0 0; margin-top: 4px; }
+  .compact-ui .admin-root .admin-page-heading { align-items: center; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+  .compact-ui .admin-root .admin-page-heading h1 { font-size: 20px; }
+  .compact-ui .admin-root .admin-page-heading > div:first-child { flex: 1 1 120px; }
+  .compact-ui .admin-root .admin-page-actions { flex-shrink: 0; margin-left: auto; }
+  .compact-ui .admin-root input:not([type='checkbox']):not([type='radio']), .compact-ui .admin-root textarea, .compact-ui .admin-root select { font-size: 16px; }
+}
