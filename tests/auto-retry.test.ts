@@ -15,6 +15,9 @@ import type { AdminData, LabSettings, Model, Prompt, Provider, Run, Schedule } f
 const ADMIN_TOKEN = 'retry-suite-admin-secret';
 const API_KEY = 'sk-retry-suite-never-expose-a9841';
 const PROMPT = '\n请保留  空格与换行并回答。\n';
+// The polling helpers must observe a retry while it is still queued. A 100 ms
+// window was too tight on loaded CI runners and made these tests flaky.
+const RETRY_WINDOW_MS = 1_000;
 type AppOptions = Parameters<typeof createApp>[0];
 type Captured = { number: number; path: string; authorization: string | undefined; body: Record<string, unknown> };
 
@@ -244,12 +247,12 @@ test('timeouts, connection failures and 5xx responses retry, then can recover', 
 
 test('cancelling a delayed retry removes its timer and leaves the failure history intact', async (t) => {
   const upstream = await mock(t, (_request, response) => reply(response, 500));
-  const f = await fixture(t, { retryBaseDelayMs: 100 });
+  const f = await fixture(t, { retryBaseDelayMs: RETRY_WINDOW_MS });
   const { model, prompt } = await configure(f, upstream.url, 2);
   const root = await start(f, model, prompt);
   const child = await waiting(f, root);
   await f.json(`/api/admin/runs/${child.id}/cancel`, 'POST');
-  await delay(150);
+  await delay(RETRY_WINDOW_MS + 100);
   assert.equal(upstream.requests.length, 1);
   const attempts = await f.chain(root.id);
   assert.deepEqual(attempts.map((item) => item.status), ['failed', 'cancelled']);
@@ -258,15 +261,15 @@ test('cancelling a delayed retry removes its timer and leaves the failure histor
 
 test('closing and restarting settles delayed work without resuming or extending automatic chains', async (t) => {
   const upstream = await mock(t, (_request, response) => reply(response, 500));
-  const f = await fixture(t, { retryBaseDelayMs: 100 });
+  const f = await fixture(t, { retryBaseDelayMs: RETRY_WINDOW_MS });
   const { model, prompt } = await configure(f, upstream.url, 2);
   const root = await start(f, model, prompt);
   const child = await waiting(f, root);
   await f.stop();
-  await delay(130);
+  await delay(RETRY_WINDOW_MS + 100);
   assert.equal(upstream.requests.length, 1, 'Closing the queue must clear delayed retry timers');
   await f.restart();
-  await delay(130);
+  await delay(RETRY_WINDOW_MS + 100);
   assert.equal(upstream.requests.length, 1, 'Restart must not re-enqueue interrupted attempts');
   const attempts = await f.chain(root.id);
   assert.equal(attempts.length, 2);
@@ -277,15 +280,16 @@ test('closing and restarting settles delayed work without resuming or extending 
 test('disabling an API provider or model prevents a queued automatic attempt from contacting upstream', async (t) => {
   for (const disabled of ['provider', 'model'] as const) {
     const upstream = await mock(t, (_request, response) => reply(response, 500));
-    const f = await fixture(t, { retryBaseDelayMs: 100 });
+    const f = await fixture(t, { retryBaseDelayMs: RETRY_WINDOW_MS });
     const { provider, model, prompt } = await configure(f, upstream.url, 2);
     const root = await start(f, model, prompt);
     const child = await waiting(f, root);
     if (disabled === 'provider') await f.json(`/api/admin/providers/${provider.id}`, 'PUT', { ...provider, enabled: false });
     else await f.json(`/api/admin/models/${model.id}`, 'PUT', { ...model, enabled: false });
-    await delay(150);
+    // Wait for the queued retry to settle instead of racing a fixed delay.
+    const attempts = await until(() => f.chain(root.id), (runs) => runs.length === 2
+      && runs.every((item) => ['completed', 'failed', 'cancelled'].includes(item.status)));
     assert.equal(upstream.requests.length, 1);
-    const attempts = await f.chain(root.id);
     assert.equal(attempts.length, 2);
     assert.ok(['failed', 'cancelled'].includes(attempts.find((item) => item.id === child.id)!.status));
     assert.ok(!attempts.at(-1)!.nextRetryId);
@@ -295,7 +299,7 @@ test('disabling an API provider or model prevents a queued automatic attempt fro
 test('automatic attempts retain request and retry-limit snapshots while manual retry starts a new chain', async (t) => {
   const upstream = await mock(t, (request, response) => reply(response, request.number <= 2 ? 503 : 200));
   const replacement = await mock(t, (_request, response) => reply(response));
-  const f = await fixture(t, { retryBaseDelayMs: 100 });
+  const f = await fixture(t, { retryBaseDelayMs: RETRY_WINDOW_MS });
   const { provider, model, prompt } = await configure(f, upstream.url, 1);
   const root = await start(f, model, prompt);
   assert.equal(root.requestTimeoutSeconds, 600);
@@ -325,7 +329,7 @@ test('automatic attempts retain request and retry-limit snapshots while manual r
 
 test('scheduled retries share their schedule and batch, and prevent duplicate scheduled launches while waiting', async (t) => {
   const upstream = await mock(t, (request, response) => reply(response, request.number === 1 ? 429 : 200));
-  const f = await fixture(t, { retryBaseDelayMs: 100 });
+  const f = await fixture(t, { retryBaseDelayMs: RETRY_WINDOW_MS });
   const { model, prompt } = await configure(f, upstream.url, 2);
   const { schedule } = await f.json<{ schedule: Schedule }>('/api/admin/schedules', 'POST', {
     name: '带自动重试的计划', modelIds: [model.id], promptIds: [prompt.id], intervalMinutes: 60, enabled: false,
