@@ -62,7 +62,7 @@ services:
       - ./model-lab-data:/app/.data
 ```
 
-Linux 宿主机上的目录需要允许容器内的非 root 用户（UID 1000）读写，例如 `mkdir -p model-lab-data && sudo chown 1000:1000 model-lab-data && chmod 700 model-lab-data`。Windows Docker Desktop 需要允许 Docker 访问该目录。把命名卷切换为空目录不会自动迁移数据，请先按本文备份恢复章节迁移。
+Linux 宿主机上的目录需要允许容器内的非 root 用户（UID 1000）读写，例如 `mkdir -p model-lab-data && sudo chown 1000:1000 model-lab-data && chmod 700 model-lab-data`；目录不可写时启动会直接提示修复方式。Windows Docker Desktop 需要允许 Docker 访问该目录：这类共享目录不支持 POSIX 权限位，应用会跳过 `chmod` 权限加固，访问控制由宿主机 ACL 决定。把命名卷切换为空目录不会自动迁移数据，请先按本文备份恢复章节迁移。
 
 **Node/Docker 默认正文存储为内存模式。** 生成的 HTML、SVG 和完整回答不会写入本地磁盘，但容器重启或内存缓存淘汰后，这些正文将不可用，历史元数据仍保留。需要本机持久化时，在后台「结果存储」选择“本地硬盘”，正文会写入 `/app/.data/artifacts`，因此必须持久化命名卷或目录映射；需要长期云端保留时，选择 Cloudflare R2 或兼容 S3 的对象存储。保留期到期或管理员删除记录时，本地或远程正文都会进入清理流程。
 

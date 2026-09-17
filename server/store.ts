@@ -39,6 +39,29 @@ export interface InjectedStoreOptions {
   dataDir?: string;
 }
 
+// Docker bind mounts from Windows and macOS hosts, plus some network
+// filesystems, accept writes but reject chmod. Permission hardening stays best
+// effort there: access control follows the host ACLs instead of POSIX modes.
+const UNSUPPORTED_PERMISSION_CODES = new Set(['EPERM', 'EACCES', 'ENOTSUP', 'EINVAL', 'EROFS']);
+function hardenPermissions(apply: () => void): void {
+  try { apply(); }
+  catch (error) {
+    const code = (error as NodeJS.ErrnoException | undefined)?.code;
+    if (code && UNSUPPORTED_PERMISSION_CODES.has(code)) return;
+    throw error;
+  }
+}
+
+/** Turn low-level write failures into an actionable message for self-hosting. */
+function dataDirectoryFailure(directory: string, error: unknown): Error {
+  const details = error as (NodeJS.ErrnoException & { errcode?: number }) | undefined;
+  const blocked = details?.code === 'EACCES' || details?.code === 'EPERM' || details?.code === 'EROFS'
+    || (details?.code === 'ERR_SQLITE_ERROR' && details?.errcode === 14);
+  if (!blocked) return error instanceof Error ? error : new Error(String(error));
+  return new Error(`数据目录不可写：${directory}。目录映射时请让容器内的非 root 用户（UID 1000）拥有该目录，`
+    + '例如在宿主机执行 chown 1000:1000 <目录> 和 chmod 700 <目录>，或改用 Docker 命名卷。');
+}
+
 function localStoreOptions(directory: string, adminToken?: string): InjectedStoreOptions {
   // Keep Node-only loading inside the local constructor path. A Worker importing
   // Store with an injected database must never load SQLite or touch the filesystem.
@@ -47,20 +70,25 @@ function localStoreOptions(directory: string, adminToken?: string): InjectedStor
   const { mkdirSync, readFileSync, writeFileSync, existsSync, chmodSync } = nodeLoader('node:fs') as typeof import('node:fs');
   const { join } = nodeLoader('node:path') as typeof import('node:path');
   mkdirSync(directory, { recursive: true, mode: 0o700 });
-  chmodSync(directory, 0o700);
+  hardenPermissions(() => chmodSync(directory, 0o700));
+  const writePrivateFile = (path: string, contents: () => Buffer | string): void => {
+    try { if (!existsSync(path)) writeFileSync(path, contents(), { mode: 0o600, flag: 'wx' }); }
+    catch (error) { throw dataDirectoryFailure(directory, error); }
+    hardenPermissions(() => chmodSync(path, 0o600));
+  };
   const keyPath = join(directory, 'encryption-key');
-  if (!existsSync(keyPath)) writeFileSync(keyPath, randomBytes(32), { mode: 0o600, flag: 'wx' });
-  chmodSync(keyPath, 0o600);
+  writePrivateFile(keyPath, () => randomBytes(32));
   const encryptionKey = readFileSync(keyPath);
   if (encryptionKey.length !== 32) throw new Error('数据加密密钥无效，请恢复原来的 encryption-key 文件。');
   const tokenPath = join(directory, 'admin-token');
-  if (!existsSync(tokenPath)) writeFileSync(tokenPath, Buffer.from(randomBytes(32)).toString('base64url') + '\n', { mode: 0o600, flag: 'wx' });
-  chmodSync(tokenPath, 0o600);
+  writePrivateFile(tokenPath, () => Buffer.from(randomBytes(32)).toString('base64url') + '\n');
   const token = adminToken || readFileSync(tokenPath, 'utf8').trim();
   if (!token) throw new Error('管理口令不能为空。');
   const databasePath = join(directory, 'app.db');
-  const database = new DatabaseSync(databasePath);
-  chmodSync(databasePath, 0o600);
+  let database: InstanceType<typeof DatabaseSync>;
+  try { database = new DatabaseSync(databasePath); }
+  catch (error) { throw dataDirectoryFailure(directory, error); }
+  hardenPermissions(() => chmodSync(databasePath, 0o600));
   database.exec('PRAGMA journal_mode=WAL; PRAGMA busy_timeout=5000; PRAGMA secure_delete=ON;');
   return {
     database, encryptionKey, adminToken: token, dataDir: directory,
