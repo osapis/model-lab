@@ -15,7 +15,7 @@ export const reasoningPrompt = `不要使用任何工具或写代码，直接推
 export function defaultPrompts(now = new Date().toISOString()): Prompt[] {
   return [
     { id: 'prompt-pelican', title: '鹈鹕骑自行车', description: '用 SVG 和 HTML 展示角色、结构与动画能力。', category: 'visual', content: visualPrompt, referenceAnswer: '', rubric: '观察要点：鹈鹕辨识度、自行车结构、骑行动作与车轮同步、动画流畅度、画面完成度。完整保留原始输出，便于比较不同接口的表现。', tags: ['SVG', '动画', '创意编程'], enabled: true, createdAt: now, updatedAt: now },
-    { id: 'prompt-candy', title: '黑袋里的糖果', description: '考察最坏情况推理，以及对可按形状选取这一条件的理解。', category: 'reasoning', content: reasoningPrompt, referenceAnswer: '21。利用手感取 12 颗五角星形和 9 颗圆形可以保证满足条件，20 颗不能保证。若禁止按形状选取、完全随机取出，则为 29。对照时请留意答案采用的取法。', rubric: '观察要点：是否说明取法；能否证明该数量必然成功（上界）；能否证明更少不能保证（下界）。保留关于题意歧义的讨论，结合完整推理过程对照。', tags: ['逻辑推理', '最坏情况', '数学'], enabled: true, createdAt: now, updatedAt: now },
+    { id: 'prompt-candy', title: '黑袋里的糖果', description: '考察最坏情况推理，以及对可按形状选取这一条件的理解。', category: 'reasoning', content: reasoningPrompt, referenceAnswer: '21。利用手感取 12 颗五角星形和 9 颗圆形可以保证满足条件，20 颗不能保证。若禁止按形状选取、完全随机取出，则为 29。对照时请留意答案采用的取法。', rubric: '观察要点：是否说明取法；能否证明该数量必然成功（上界）；能否证明更少不能保证（下界）。保留关于题意歧义的讨论，结合完整推理过程对照。', standardAnswer: '21', tags: ['逻辑推理', '最坏情况', '数学'], enabled: true, createdAt: now, updatedAt: now },
   ];
 }
 

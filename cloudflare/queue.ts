@@ -77,6 +77,7 @@ export class CloudRunQueue {
       promptTitle: prompt.title, promptContent: prompt.content, category: prompt.category,
       referenceAnswer: prompt.referenceAnswer, rubric: prompt.rubric,
       status: 'queued', source: 'api', sourceLabel: '配置 API 实际调用', output: '', html: '', reasoning: '', error: '',
+      standardAnswer: prompt.standardAnswer?.trim() || undefined,
       latencyMs: null, inputTokens: null, outputTokens: null, createdAt: this.timestamp(), finishedAt: null,
       hasHtml: false, artifactAvailable: false, retryLimit: normalizeMaxRetries(this.store.settings().maxRetries), retryAttempt: 0, retryRootId: id,
       requestTimeoutSeconds: this.configuredTimeoutSeconds(),

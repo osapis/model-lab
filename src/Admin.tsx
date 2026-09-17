@@ -451,7 +451,7 @@ function Prompts({ prompts, busy, mutate }: { prompts: Prompt[]; busy: string; m
           <ConfirmDelete disabled={!!busy} label={`删除提示词 ${prompt.title}`} onDelete={() => mutate(`prompt-delete-${prompt.id}`, `/api/admin/prompts/${prompt.id}`, json('DELETE'), '提示词已删除。历史测试保留原始提示词快照。')} />
         </div>
       </div>{prompt.description && <p className="admin-prompt-description">{prompt.description}</p>}<pre className="admin-prompt-excerpt">{prompt.content}</pre>
-      <div className="admin-prompt-row-footer"><div className="admin-tags">{prompt.tags.map((tag, index) => <span key={`${tag}-${index}`}>{tag}</span>)}</div><span>{prompt.referenceAnswer ? '已设参考答案' : '未设参考答案'} · {prompt.content.length} 字符</span></div>
+      <div className="admin-prompt-row-footer"><div className="admin-tags">{prompt.tags.map((tag, index) => <span key={`${tag}-${index}`}>{tag}</span>)}</div><span>{prompt.referenceAnswer ? '已设参考答案' : '未设参考答案'}{prompt.standardAnswer ? ` · 标准答案：${prompt.standardAnswer}` : ''} · {prompt.content.length} 字符</span></div>
     </article>)}</div>}
   </section>;
 }
@@ -462,6 +462,7 @@ function PromptEditor({ prompt, busy, mutate, onClose }: { prompt?: Prompt; busy
   const [category, setCategory] = useState<Category>(prompt?.category ?? 'visual');
   const [content, setContent] = useState(prompt?.content ?? '');
   const [referenceAnswer, setReferenceAnswer] = useState(prompt?.referenceAnswer ?? '');
+  const [standardAnswer, setStandardAnswer] = useState(prompt?.standardAnswer ?? '');
   const [rubric, setRubric] = useState(prompt?.rubric ?? '');
   const [tags, setTags] = useState(prompt?.tags.join(', ') ?? '');
   const [enabled, setEnabled] = useState(prompt?.enabled ?? true);
@@ -469,7 +470,7 @@ function PromptEditor({ prompt, busy, mutate, onClose }: { prompt?: Prompt; busy
     event.preventDefault();
     if (await mutate('prompt-save', `/api/admin/prompts${prompt ? `/${prompt.id}` : ''}`, json(prompt ? 'PUT' : 'POST', {
       title: title.trim(), description: description.trim(), category, content: content.trim(), referenceAnswer: referenceAnswer.trim(),
-      rubric: rubric.trim(), tags: [...new Set(tags.split(/[,，\n]/).map((tag) => tag.trim()).filter(Boolean))], enabled,
+      rubric: rubric.trim(), standardAnswer: standardAnswer.trim(), tags: [...new Set(tags.split(/[,，\n]/).map((tag) => tag.trim()).filter(Boolean))], enabled,
     }), '提示词已保存。新的测试将使用此版本。')) onClose();
   }
   return <EditorFrame title={prompt ? `编辑提示词 · ${prompt.title}` : '新建测试提示词'} busy={!!busy} onClose={onClose}><form onSubmit={save}>
@@ -479,6 +480,7 @@ function PromptEditor({ prompt, busy, mutate, onClose }: { prompt?: Prompt; busy
       <label className="admin-field admin-field-full">测试提示词<textarea rows={7} value={content} onChange={(event) => setContent(event.target.value)} placeholder="输入原始提示词，系统将原文发送给模型…" maxLength={100000} required /><small>HTML / SVG 输出会在前台隔离预览；逻辑推理和文本输出以文字展示。</small></label>
       <label className="admin-field">参考答案（可选）<textarea rows={4} value={referenceAnswer} onChange={(event) => setReferenceAnswer(event.target.value)} placeholder="供结果对照使用，不会发送给参测模型" maxLength={20000} /></label>
       <label className="admin-field">观察要点（可选）<textarea rows={4} value={rubric} onChange={(event) => setRubric(event.target.value)} placeholder="例如：画面完整、动作自然、遵守题目约束。方便对照查看模型输出。" maxLength={20000} /></label>
+      <label className="admin-field">标准答案数字（可选）<input inputMode="decimal" value={standardAnswer} onChange={(event) => setStandardAnswer(event.target.value)} placeholder="例如：21；填写后提取输出中的第一个数字" /></label>
       <label className="admin-field admin-field-full">标签<input value={tags} onChange={(event) => setTags(event.target.value)} placeholder="用逗号分隔，例如：SVG, 动画, 创意" /><small>最多 15 个标签，每个不超过 40 字符。</small></label>
     </div><label className="admin-checkbox-label"><input type="checkbox" checked={enabled} onChange={(event) => setEnabled(event.target.checked)} />启用此提示词</label>
     <FormActions busy={!!busy} saving={busy === 'prompt-save'} onClose={onClose} />

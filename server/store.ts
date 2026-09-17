@@ -239,6 +239,7 @@ export function runDto(run: StoredRun): Run {
     providerName: run.providerName, modelName: run.modelName, modelSlug: run.modelSlug,
     promptTitle: run.promptTitle, promptContent: run.promptContent, category: run.category,
     referenceAnswer: run.referenceAnswer, rubric: run.rubric,
+    ...(typeof run.standardAnswer === 'string' && run.standardAnswer.trim() ? { standardAnswer: run.standardAnswer.trim() } : {}),
     status: run.status, source: run.source, sourceLabel: run.sourceLabel,
     output: '', html: '', reasoning: '', error: run.error,
     latencyMs: run.latencyMs, inputTokens: run.inputTokens, outputTokens: run.outputTokens,

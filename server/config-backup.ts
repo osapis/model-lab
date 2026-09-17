@@ -35,7 +35,8 @@ const modelSchema = z.object({
 const promptSchema = z.object({
   id, title: z.string().trim().min(1).max(120), description: z.string().max(1000), category: z.enum(['visual', 'reasoning', 'text']),
   content: z.string().min(1).max(100000).refine(value => Boolean(value.trim())), referenceAnswer: z.string().max(20000),
-  rubric: z.string().max(20000), tags: z.array(z.string().trim().min(1).max(40)).max(15),
+  rubric: z.string().max(20000), standardAnswer: z.string().trim().regex(/^[+-]?\d+(?:\.\d+)?$/).or(z.literal('')).default(''),
+  tags: z.array(z.string().trim().min(1).max(40)).max(15),
   enabled: z.boolean(), createdAt: timestamp, updatedAt: timestamp,
 }).strict();
 const scheduleSchema = z.object({
@@ -179,6 +180,7 @@ export function exportConfig(store: Store, artifacts: ArtifactRepository, passwo
         enabled: model.enabled, maxTokens: model.maxTokens, reasoningEffort: model.reasoningEffort, createdAt: model.createdAt })),
       prompts: store.all<Prompt>('prompts').map(prompt => ({ id: prompt.id, title: prompt.title, description: prompt.description,
         category: prompt.category, content: prompt.content, referenceAnswer: prompt.referenceAnswer, rubric: prompt.rubric,
+        standardAnswer: prompt.standardAnswer ?? '',
         tags: prompt.tags, enabled: prompt.enabled, createdAt: prompt.createdAt, updatedAt: prompt.updatedAt })),
       schedules: store.all<Schedule>('schedules').map(schedule => ({ id: schedule.id, name: schedule.name, promptIds: schedule.promptIds,
         modelIds: schedule.modelIds, intervalMinutes: schedule.intervalMinutes, enabled: schedule.enabled, createdAt: schedule.createdAt,

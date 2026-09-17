@@ -137,8 +137,8 @@ export default function ReasoningHistory({ providerId, query, refreshVersion, on
   };
 
   return <section className="rh-history" aria-labelledby={`${regionId}-title`}>
-    <header className="rh-heading"><h3 id={`${regionId}-title`}>糖果推理 <span className="rh-window-label" title="保留最近24小时的全部记录，按实际完成时间归入整点小时；首尾小时仅展示窗口内记录。">24小时 · 整点分段</span></h3><button className="rh-refresh" aria-label="刷新推理历史" title="刷新推理历史" disabled={refreshing} onClick={() => refreshRequest.current()}><RefreshCw size={15} className={refreshing ? 'spinning' : ''} /></button></header>
-    <div className="rh-legend" aria-label="标准答案21；每条代表一次非失败API调用；样例不计入"><span className="rh-standard">标准 {data?.expectedAnswer || '21'}</span><span><i className="correct" />正确</span><span><i className="incorrect" />错误</span><span><i className="pending" />进行中</span><span><i className="unavailable" />暂无结果</span></div>
+    <header className="rh-heading"><h3 id={`${regionId}-title`}>逻辑推理 <span className="rh-window-label" title="保留最近24小时的全部记录，按实际完成时间归入整点小时；首尾小时仅展示窗口内记录。">24小时 · 整点分段</span></h3><button className="rh-refresh" aria-label="刷新推理历史" title="刷新推理历史" disabled={refreshing} onClick={() => refreshRequest.current()}><RefreshCw size={15} className={refreshing ? 'spinning' : ''} /></button></header>
+    <div className="rh-legend" aria-label={`标准答案${data?.expectedAnswer || '21'}；每条代表一次非失败API调用；样例不计入`}><span className="rh-standard">标准 {data?.expectedAnswer || '21'}</span><span><i className="correct" />正确</span><span><i className="incorrect" />错误</span><span><i className="pending" />进行中</span><span><i className="unavailable" />暂无结果</span></div>
     {error && <div className="rh-error" role="alert"><p>{data ? `刷新失败，保留上次数据：${error}` : error}</p><button onClick={() => refreshRequest.current()}>重试</button></div>}
     {loading ? <div className="rh-loading" role="status"><LoaderCircle size={15} className="spinning" />正在读取记录…</div> : data && <>
       {preparedRows.length ? preparedRows.map(({ row, hours }) => {

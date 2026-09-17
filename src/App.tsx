@@ -7,6 +7,8 @@ import Preview from './Preview';
 import HourlyResults from './HourlyResults';
 import RetryInfo from './RetryInfo';
 import CandyPreview from './CandyPreview';
+import Markdown from './Markdown';
+import { extractNumericAnswer } from '../shared/answer';
 import ReasoningHistory from './ReasoningHistory';
 import './mobile-results.css';
 import { forgetArtifacts, useArtifact, useVisible } from './useArtifact';
@@ -303,6 +305,14 @@ function RunState({ run, loadError }: { run: Run; loadError?: string }) {
   return <div className={`run-state ${run.status}`} role="status">{active ? <LoaderCircle size={26} className="spinning" /> : <Activity size={26} />}<strong>{statusNames[run.status]}</strong><p>{run.error || (run.status === 'queued' ? '等待执行。' : run.status === 'running' ? '正在等待接口返回。' : run.status === 'cancelled' ? '本次测试已取消，没有完成的模型输出。' : '接口未返回可用结果。')}</p>{active && <p>{loadError ? `状态更新失败：${loadError}。请刷新页面重试。` : '此处会自动更新测试状态。'}</p>}</div>;
 }
 
+function AnswerBadge({ verdict }: { verdict: 'correct' | 'incorrect' }) {
+  const correct = verdict === 'correct';
+  return <span className={`answer-verdict ${verdict}`} title={correct ? '提取的数字与标准答案一致' : '提取的数字与标准答案不一致'}>
+    {correct ? <Check size={12} aria-hidden="true" /> : <X size={12} aria-hidden="true" />}
+    {correct ? '逻辑推理正确' : '逻辑推理错误'}
+  </span>;
+}
+
 function ResultCard({ run: metadata, selected, onOpen, onCompare, onResultChanged }: { run: Run; selected: boolean; onOpen: () => void; onCompare: () => void; onResultChanged: () => void }) {
   const { ref, visible } = useVisible();
   const { run, loading, error, hydrated } = useArtifact(metadata, visible);
@@ -326,17 +336,21 @@ function ResultCard({ run: metadata, selected, onOpen, onCompare, onResultChange
     }
   }, [run.id, run.status, run.finishedAt, metadata.status, metadata.finishedAt, onResultChanged]);
   if (superseded) return null;
-  const candyAnswer = /糖果/.test(run.promptContent) && run.output.match(/^\s*(?:\*\*)?(\d+)/)?.[1];
+  const builtinCandy = run.category === 'reasoning' && /糖果/.test(run.promptContent);
+  const expectedAnswer = run.standardAnswer?.trim() || (builtinCandy ? '21' : undefined);
+  const extracted = expectedAnswer && run.output ? extractNumericAnswer(run.output, expectedAnswer) : undefined;
+  const candyAnswer = builtinCandy ? extracted?.answer : undefined;
+  const gradedVerdict = (extracted?.verdict === 'correct' || extracted?.verdict === 'incorrect') ? extracted.verdict : undefined;
   return <article ref={ref} className={`result-card ${selected ? 'is-selected' : ''}`}>
     <div className={`result-art ${run.category}`}>
-      {run.status !== 'completed' ? <RunState run={run} loadError={error} /> : loading || (!hydrated && !error) ? <Loading label="正在加载作品…" /> : error || run.artifactAvailable === false ? <div className="artifact-missing"><Clock3 size={27} /><strong>{error ? '作品暂时无法加载' : run.artifactStorage === 'cloudflare' ? '云端作品暂不可用' : run.artifactStorage === 'disk' ? '本地作品暂不可用' : '作品缓存已失效'}</strong><span>{error || '测试记录与请求参数仍然保留'}</span></div> : run.html ? <Preview html={run.html} title={run.promptTitle} compact /> : run.category === 'reasoning' && candyAnswer ? <CandyPreview answer={candyAnswer} seed={run.id} /> : <div className="text-art"><Braces size={32} /><p>{run.output.slice(0, 260) || '此记录没有文本输出。'}</p></div>}
+      {run.status !== 'completed' ? <RunState run={run} loadError={error} /> : loading || (!hydrated && !error) ? <Loading label="正在加载作品…" /> : error || run.artifactAvailable === false ? <div className="artifact-missing"><Clock3 size={27} /><strong>{error ? '作品暂时无法加载' : run.artifactStorage === 'cloudflare' ? '云端作品暂不可用' : run.artifactStorage === 'disk' ? '本地作品暂不可用' : '作品缓存已失效'}</strong><span>{error || '测试记录与请求参数仍然保留'}</span></div> : run.html ? <Preview html={run.html} title={run.promptTitle} compact /> : builtinCandy && candyAnswer ? <CandyPreview answer={candyAnswer} seed={run.id} /> : <div className="text-art"><Markdown content={run.output} /></div>}
       <span className={`art-category ${run.category}`}><span />{categories[run.category]}</span>
     </div>
     <div className="result-card-body">
       <div className="result-provider-heading"><span className={`provider-caption ${run.source}`}>{run.source === 'sample' ? '会话样例 · 非 API 实测' : 'API 接口'}</span><span className={`status-pill ${run.status}`}><span />{statusNames[run.status]}</span></div>
       <div className="result-title-line"><h3 className="provider-name"><button onClick={onOpen}>{run.source === 'sample' ? '会话子代理样例' : run.providerName || '未命名接口'}</button></h3></div>
       <div className="result-model-time"><div className="result-model-info"><div className="model-line"><span className="model-avatar">{run.source === 'sample' ? <Sparkles size={12} /> : <Cpu size={12} />}</span><strong>{run.modelName}</strong>{run.modelSlug && run.modelSlug !== run.modelName && <span className="model-slug">{run.modelSlug}</span>}</div><div className="model-reasoning" title={`思考强度：${run.parameters.reasoningEffort?.trim() || '未记录'}`}><span>思考强度</span><strong>{run.parameters.reasoningEffort?.trim() || '未记录'}</strong></div></div><TestTimestamp run={run} /></div>
-      <div className="result-prompt-row"><h4 className="result-prompt-title">{run.promptTitle}</h4><RetryInfo run={run} compact /></div>
+      <div className="result-prompt-row"><h4 className="result-prompt-title">{run.promptTitle}</h4><RetryInfo run={run} compact /></div>{gradedVerdict && <AnswerBadge verdict={gradedVerdict} />}
       <div className="card-metrics"><span className="run-duration" title={`耗时 ${time(run.latencyMs)}`}><Clock3 size={13} aria-hidden="true" /><span className="metric-label">耗时</span><strong>{time(run.latencyMs)}</strong></span><span className="token-metric" title={`输出 Token：${run.outputTokens ?? '未记录'}`}><Braces size={13} aria-hidden="true" /><span>{run.outputTokens === null ? '—' : run.outputTokens.toLocaleString()}<span className="metric-unit"> tokens</span></span></span></div>
     </div>
     <div className="result-card-footer"><button className={`compare-checkbox ${selected ? 'checked' : ''}`} aria-pressed={selected} onClick={onCompare}><span>{selected && <Check size={11} />}</span>加入对比</button><button className="open-result" onClick={onOpen}>查看结果 <ArrowUpRight size={15} /></button></div>
@@ -385,12 +399,12 @@ function RunDetail({ run: metadata, onClose, onToast }: { run: Run; onClose: () 
     <div className="detail-body">
       {(tab === 'preview' || tab === 'output') && (run.status !== 'completed' ? <RunState run={run} loadError={error} /> : loading || (!hydrated && !error) ? <Loading label="正在加载作品…" /> : (run.artifactAvailable === false || error) && <div className="notice"><Clock3 size={17} />{error || (run.artifactStorage === 'cloudflare' ? '云端作品正文暂不可用，测试记录与请求参数仍然保留。管理员可在存储设置中验证云端读写状态。' : run.artifactStorage === 'disk' ? '本地作品正文暂不可用，测试记录与请求参数仍然保留。请检查 DATA_DIR/artifacts 文件和目录权限。' : '完整作品已从内存缓存中移除。测试记录和请求参数仍然保留；配置本地硬盘或对象存储可长期保留后续作品。')}</div>)}
       {tab === 'preview' && run.html && <Preview html={run.html} title={run.promptTitle} />}
-      {tab === 'output' && <>{run.output ? <pre className="raw-output">{run.output}</pre> : run.status === 'completed' && hydrated && !loading && !error && run.artifactAvailable !== false && <pre className="raw-output">此记录没有文本输出。</pre>}{run.reasoning && <details><summary>接口返回的推理文本</summary><pre className="raw-output">{run.reasoning}</pre></details>}</>}
+      {tab === 'output' && <>{run.output ? <Markdown className="detail-markdown" content={run.output} /> : run.status === 'completed' && hydrated && !loading && !error && run.artifactAvailable !== false && <pre className="raw-output">此记录没有文本输出。</pre>}{run.reasoning && <details><summary>接口返回的推理文本</summary><pre className="raw-output">{run.reasoning}</pre></details>}</>}
       {tab === 'prompt' && <><span className="field-caption">本次测试使用的提示词快照</span><pre className="prompt-full">{run.promptContent}</pre></>}
-      {tab === 'reference' && <div className="reference-panel"><div className="reference-stats"><div><span>运行状态</span><strong>{statusNames[run.status]}</strong></div><div><span>请求总耗时</span><strong>{time(run.latencyMs)}</strong></div><div><span>输入 / 输出 Token</span><strong>{run.inputTokens ?? '—'} / {run.outputTokens ?? '—'}</strong></div></div><h3>参考答案</h3><p className="preserve-text">{run.referenceAnswer || '开放题，请直接观察原始作品与输出。'}</p><h3>参考说明</h3><p className="preserve-text">{run.rubric || '尚未设置参考说明。'}</p><h3>本次请求参数</h3><pre className="parameter-json">{run.source === 'sample' ? '会话子代理生成，没有本站 API 请求参数。' : JSON.stringify(requestParameters, null, 2)}</pre><div className="notice"><ShieldCheck size={16} />所有测试按原样展示。请求完成仅表示收到了接口输出，请结合题目和原始结果判断实际表现。</div></div>}
+      {tab === 'reference' && <div className="reference-panel"><div className="reference-stats"><div><span>运行状态</span><strong>{statusNames[run.status]}</strong></div><div><span>请求总耗时</span><strong>{time(run.latencyMs)}</strong></div><div><span>输入 / 输出 Token</span><strong>{run.inputTokens ?? '—'} / {run.outputTokens ?? '—'}</strong></div></div><h3>参考答案</h3><p className="preserve-text">{run.referenceAnswer || '开放题，请直接观察原始作品与输出。'}</p>{run.standardAnswer && <><h3>标准答案数字</h3><p className="preserve-text">{run.standardAnswer}</p></>}<h3>参考说明</h3><p className="preserve-text">{run.rubric || '尚未设置参考说明。'}</p><h3>本次请求参数</h3><pre className="parameter-json">{run.source === 'sample' ? '会话子代理生成，没有本站 API 请求参数。' : JSON.stringify(requestParameters, null, 2)}</pre><div className="notice"><ShieldCheck size={16} />所有测试按原样展示。请求完成仅表示收到了接口输出，请结合题目和原始结果判断实际表现。</div></div>}
     </div><div className="modal-footer"><span><ShieldCheck size={14} />保留原始输出 · 预览与站点隔离</span><button className="button secondary" onClick={onClose}>完成</button></div>
   </Modal>;
 }
 function PromptDetail({ prompt, onClose, onTest, onToast }: { prompt: Prompt; onClose: () => void; onTest: () => void; onToast: (text: string) => void }) {
-  return <Modal title={prompt.title} onClose={onClose}><div className="prompt-detail"><span className="pill mint">{categories[prompt.category]}</span><p>{prompt.description}</p><div className="field-title"><span>原始提示词</span><button className="text-button" onClick={() => void copyText(prompt.content, onToast)}><Copy size={13} />复制</button></div><pre className="prompt-full">{prompt.content}</pre>{prompt.referenceAnswer && <details><summary>参考答案与取法说明</summary><p className="preserve-text">{prompt.referenceAnswer}</p></details>}{prompt.rubric && <details><summary>参考说明</summary><p className="preserve-text">{prompt.rubric}</p></details>}</div><div className="modal-footer"><span>每次测试保留独立的提示词快照</span><button className="button primary" onClick={onTest}><Play size={14} />使用这道题</button></div></Modal>;
+  return <Modal title={prompt.title} onClose={onClose}><div className="prompt-detail"><span className="pill mint">{categories[prompt.category]}</span><p>{prompt.description}</p><div className="field-title"><span>原始提示词</span><button className="text-button" onClick={() => void copyText(prompt.content, onToast)}><Copy size={13} />复制</button></div><pre className="prompt-full">{prompt.content}</pre>{prompt.standardAnswer && <details><summary>标准答案数字</summary><p className="preserve-text">{prompt.standardAnswer}</p></details>}{prompt.referenceAnswer && <details><summary>参考答案与取法说明</summary><p className="preserve-text">{prompt.referenceAnswer}</p></details>}{prompt.rubric && <details><summary>参考说明</summary><p className="preserve-text">{prompt.rubric}</p></details>}</div><div className="modal-footer"><span>每次测试保留独立的提示词快照</span><button className="button primary" onClick={onTest}><Play size={14} />使用这道题</button></div></Modal>;
 }

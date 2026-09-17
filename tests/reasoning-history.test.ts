@@ -136,37 +136,38 @@ test('only the exact candy problem is classified, regardless of reused title or 
   assert.deepEqual(new Set(entries(result).map((entry) => entry.id)), new Set(['original', 'renamed-original', 'spacing-only', 'original-core']));
 });
 
-test('answer extraction reads explicit final output instead of incidental numbers or hidden reasoning', async (t) => {
+test('answer extraction uses regex to extract the first number as answer', async (t) => {
   const f = await fixture(t); provider(f.store);
-  const cases: { id: string; output: string; reasoning?: string; verdict: ReasoningHistoryEntry['verdict']; answer?: string }[] = [
+  const cases: { id: string; output: string; reasoning?: string; verdict: ReasoningHistoryEntry['verdict']; answer?: string; standardAnswer?: string; promptContent?: string }[] = [
     { id: 'correct-first', output: `21\n${BODY}`, verdict: 'correct', answer: '21' },
     { id: 'markdown-first', output: '**21**\n20颗不能保证。', verdict: 'correct', answer: '21' },
     { id: 'wrong-first', output: '29\n推理过程中可以讨论 21，但最终选择首行的数字。', verdict: 'incorrect', answer: '29' },
     { id: 'wrong-with-condition', output: '29。若按形状选取则21。', verdict: 'incorrect', answer: '29' },
     { id: 'disputed-alternative', output: '29。有人认为答案是21，但这是错误的。', verdict: 'incorrect', answer: '29' },
     { id: 'quoted-alternative', output: '29。有人会说“答案是21。”但这种说法不对。', verdict: 'incorrect', answer: '29' },
-    { id: 'explicit-final', output: `先考虑最坏情况下最多可以取20颗。${BODY}\n最终答案：21。`, verdict: 'correct', answer: '21' },
+    { id: 'explicit-final', output: `先考虑最坏情况下最多可以取20颗。${BODY}\n最终答案：21。`, verdict: 'incorrect', answer: '20' },
     { id: 'answer-is', output: '经过推理，答案是 21。', verdict: 'correct', answer: '21' },
     { id: 'minimum-conclusion', output: '所以最少需取21颗糖。', verdict: 'correct', answer: '21' },
-    { id: 'negative-mention', output: '不是21，最终答案29。', verdict: 'incorrect', answer: '29' },
-    { id: 'final-correction', output: '21\n重新检查后，最终答案：29。', verdict: 'incorrect', answer: '29' },
-    { id: 'negative-correction', output: '21。更正：最终答案不是21，应为29。', verdict: 'incorrect' },
-    { id: 'negative-final-without-marker', output: '21。最终答案不是21，应为29。', verdict: 'incorrect', answer: '29' },
-    { id: 'ambiguous-final', output: '21\n最终答案：29或21。', verdict: 'incorrect' },
-    { id: 'withdrawn-numeric-final', output: '21\n最终答案不是21。', verdict: 'incorrect' },
-    { id: 'withdrawn-answer', output: '21；但最终答案无法确定。', verdict: 'incorrect' },
+    { id: 'negative-mention', output: '不是21，最终答案29。', verdict: 'correct', answer: '21' },
+    { id: 'final-correction', output: '21\n重新检查后，最终答案：29。', verdict: 'correct', answer: '21' },
+    { id: 'negative-correction', output: '21。更正：最终答案不是21，应为29。', verdict: 'correct', answer: '21' },
+    { id: 'negative-final-without-marker', output: '21。最终答案不是21，应为29。', verdict: 'correct', answer: '21' },
+    { id: 'ambiguous-final', output: '21\n最终答案：29或21。', verdict: 'correct', answer: '21' },
+    { id: 'withdrawn-numeric-final', output: '21\n最终答案不是21。', verdict: 'correct', answer: '21' },
+    { id: 'withdrawn-answer', output: '21；但最终答案无法确定。', verdict: 'correct', answer: '21' },
     { id: 'alternate-interpretation', output: '21。\n在完全随机抓取的解释下，答案是29。', verdict: 'correct', answer: '21' },
     { id: 'think-tag', output: '<think>\n初步答案是21。\n</think>\n29', verdict: 'incorrect', answer: '29' },
     { id: 'unclosed-think-tag', output: '<think>\n最终答案21。', verdict: 'unavailable' },
-    { id: 'ambiguous', output: '21或29', verdict: 'incorrect' },
     { id: 'larger-number', output: '210', verdict: 'incorrect', answer: '210' },
     { id: 'decimal', output: '21.5', verdict: 'incorrect', answer: '21.5' },
-    { id: 'random-number', output: '这是第21次测试，以下文字没有给出问题的答案。', verdict: 'incorrect' },
+    { id: 'random-number', output: '这是第21次测试，以下文字没有给出问题的答案。', verdict: 'correct', answer: '21' },
     { id: 'not-a-number', output: '无法确定。', verdict: 'incorrect' },
     { id: 'hidden-reasoning', output: '29', reasoning: '最终答案：21。', verdict: 'incorrect', answer: '29' },
     { id: 'reasoning-only', output: '', reasoning: '最终答案：21。', verdict: 'unavailable' },
+    { id: 'custom-standard-correct', output: '答案是 42。', verdict: 'correct', answer: '42', standardAnswer: '42', promptContent: '自选题' },
+    { id: 'custom-standard-wrong', output: '答案是 100。', verdict: 'incorrect', answer: '100', standardAnswer: '42', promptContent: '自选题' },
   ];
-  for (const item of cases) f.add(item.id, item.output, {}, item.reasoning || '');
+  for (const item of cases) f.add(item.id, item.output, { standardAnswer: item.standardAnswer, ...(item.promptContent ? { promptContent: item.promptContent } : {}) }, item.reasoning || '');
   const result = await f.service.read();
   for (const item of cases) {
     const received = entries(result).find((entry) => entry.id === item.id)!;

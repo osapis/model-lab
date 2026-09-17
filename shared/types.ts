@@ -13,7 +13,7 @@ export interface Model {
 export interface Prompt {
   id: string; title: string; description: string; category: Category;
   content: string; referenceAnswer: string; rubric: string; tags: string[];
-  enabled: boolean; createdAt: string; updatedAt: string;
+  standardAnswer?: string; enabled: boolean; createdAt: string; updatedAt: string;
 }
 export interface Run {
   id: string; batchId: string; promptId: string; modelId: string;
@@ -21,6 +21,8 @@ export interface Run {
   promptTitle: string; promptContent: string; category: Category;
   referenceAnswer: string; rubric: string;
   status: 'queued' | 'running' | 'completed' | 'failed' | 'cancelled';
+/** Numeric answer captured when this invocation was created; used only for display and grading. */
+  standardAnswer?: string;
   source: 'api' | 'sample'; sourceLabel: string;
   output: string; html: string; reasoning: string; error: string;
   latencyMs: number | null; inputTokens: number | null; outputTokens: number | null;

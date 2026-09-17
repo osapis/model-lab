@@ -1,4 +1,5 @@
 import type { ReasoningHistoryEntry, ReasoningHistoryResponse, ReasoningHistoryRow } from '../shared/reasoning-history.ts';
+import { extractNumericAnswer } from '../shared/answer.ts';
 import { runFinishedAt, runResultAt, runResultTime } from '../shared/run-time.ts';
 import type { ArtifactRepository, ArtifactRef, ArtifactPayload } from './artifacts.ts';
 import { reasoningPrompt } from './seed.ts';
@@ -22,66 +23,20 @@ function questionCore(text: string): string {
 const CANDY_QUESTION = questionCore(reasoningPrompt);
 
 /** Identify the actual prompt snapshot, including every count and condition, never its editable ID/title. */
-export function isCandyRun(run: Pick<StoredRun, 'source' | 'category' | 'promptContent'>): boolean {
-  return run.source === 'api' && run.category === 'reasoning' && questionCore(run.promptContent) === CANDY_QUESTION;
-}
-const shortText = (text: string) => [...text.replace(/[\p{C}]/gu, ' ').replace(/\s+/g, ' ').trim()].slice(0, 80).join('');
-function plainAnswerText(text: string): string {
-  const finalOutput = text.replace(/<think\b[^>]*>[\s\S]*?<\/think\s*>/gi, '');
-  if (/<think\b/i.test(finalOutput)) return '';
-  return finalOutput.normalize('NFKC').replace(/```[^\n]*\n?/g, '').replace(/\*\*|__/g, '').replace(/`|\$/g, '')
-    .replace(/^\s*[#>]+\s*/gm, '').trim();
-}
-function numberAtStart(text: string): string | null {
-  const match = text.trim().match(/^([+-]?\d+(?:\.\d+)?)([\s\S]*)$/);
-  if (!match) return null;
-  let tail = match[2]!.trimStart().replace(/^(?:颗|个|枚|粒)(?:糖果|糖)?/, '').trimStart();
-  // A range, alternative, expression or numbered list is not a unique final answer.
-  if (/^[,，、]?\s*(?:或|或者|和|及|到|至|\/|~|-)/.test(tail)) return null;
-  if (tail && !/^[。.!！,，;；:：]/.test(tail)) return null;
-  if (/^\.\s+\S/.test(tail)) return null;
-  return match[1]!;
+export function isCandyRun(run: Pick<StoredRun, 'source' | 'category' | 'promptContent' | 'standardAnswer'>): boolean {
+  return run.source === 'api' && run.category === 'reasoning'
+    && (Boolean(run.standardAnswer?.trim()) || questionCore(run.promptContent) === CANDY_QUESTION);
 }
 
-/** Only a leading answer or an explicit, unconditional conclusion can establish the result. */
-export function extractCandyAnswer(output: string): Answer {
-  const text = plainAnswerText(output);
-  if (!text) return unavailable();
-  const firstLine = text.split(/\r?\n/).find(line => line.trim())!.trim();
-  let answer = numberAtStart(firstLine);
-  let withdrawn = '';
-  const conclusions = /(?:最终答案|最后答案|最终结论|结论|答案)(?:\s*(?:是|为|应为|等于))?\s*[:：]?\s*([+-]?\d+(?:\.\d+)?)|(?:因此|所以|故)(?:[，,\s]*)(?:最少|至少)(?:需要|需|要)?(?:取出|取|抽取|抽出)?\s*([+-]?\d+(?:\.\d+)?)|(?:应为|应改为|应当是|改为|改成)\s*[:：]?\s*([+-]?\d+(?:\.\d+)?)|(?:最终答案|最后答案|最终结论|结论)(?:是|为|:|：|\s)*(无法确定|不能确定|不确定|没有唯一答案|无唯一答案|无解)|(?:最终答案|最后答案|最终结论|结论)\s*[:：]?\s*(不是|并非|不应为|不应是)\s*([+-]?\d+(?:\.\d+)?)/g;
-  for (const match of text.matchAll(conclusions)) {
-    const position = match.index!;
-    const sentenceStart = Math.max(text.lastIndexOf('\n', position), text.lastIndexOf('。', position), text.lastIndexOf('；', position));
-    const context = text.slice(Math.max(0, sentenceStart + 1), position);
-    const paragraphStart = text.lastIndexOf('\n\n', position);
-    const paragraph = text.slice(paragraphStart < 0 ? 0 : paragraphStart + 2, position);
-    const correction = /(?:更正|修正|纠正|改口|重新(?:检查|计算|推理|分析)|应当改)/.test(context);
-    const reported = /(?:有人|别人|他人|错误|误答|引用|举例|示例|例如|声称|认为|不正确)/;
-    const conditional = /(?:若|如果|假设|假如|倘若|否则|可能|取决于|另一种|(?:按|允许|可以).{0,40}(?:时|则)|在.{0,40}(?:情况下|条件下|解释下))/;
-    if (reported.test(context) || conditional.test(context)) continue;
-    if (answer !== null && !correction && (reported.test(paragraph) || conditional.test(paragraph))) continue;
-    const before = text.slice(Math.max(0, sentenceStart + 1), position);
-    if (before.lastIndexOf('“') > before.lastIndexOf('”')
-      || before.lastIndexOf('「') > before.lastIndexOf('」') || (before.match(/"/g)?.length || 0) % 2) continue;
-    if (match[4]) { withdrawn = match[4]; answer = null; continue; }
-    if (match[5]) { withdrawn = shortText(text.slice(position).split(/\r?\n/, 1)[0]!); answer = null; continue; }
-    const raw = match[1] || match[2] || match[3] || '';
-    const start = position + match[0].lastIndexOf(raw);
-    const candidate = numberAtStart(text.slice(start).split(/\r?\n/, 1)[0]!);
-    const explicit = /^(?:最终|最后)/.test(match[0]);
-    if (candidate === null) {
-      if (explicit) { withdrawn = shortText(text.slice(position).split(/\r?\n/, 1)[0]!); answer = null; }
-      continue;
-    }
-    if (answer !== null && !explicit && !correction && !(match[3] && /(?:最终|最后|结论)/.test(context))) continue;
-    if (match[3] && !correction && !/(?:最终|结论)/.test(context)) continue;
-    answer = candidate; withdrawn = '';
-  }
-  if (withdrawn) return { verdict: 'incorrect', answer: withdrawn, error: '' };
-  if (answer === null) return { verdict: 'incorrect', answer: shortText(firstLine), error: '' };
-  return { verdict: answer === '21' ? 'correct' : 'incorrect', answer: shortText(answer), error: '' };
+const expectedAnswerOf = (run: Pick<StoredRun, 'standardAnswer' | 'promptContent'>): string | undefined =>
+  typeof run.standardAnswer === 'string' && run.standardAnswer.trim()
+    ? run.standardAnswer.trim()
+    : questionCore(run.promptContent) === CANDY_QUESTION ? '21' : undefined;
+
+export function extractAnswer(output: string, expectedAnswer?: string): Answer {
+  const { verdict, answer, error } = extractNumericAnswer(output, expectedAnswer);
+  if (verdict === 'ungraded') return { verdict: 'unavailable', answer, error: '未设置标准答案数字。' };
+  return { verdict, answer, error: error || '' };
 }
 
 interface HistoryQuery { providerId?: string; q?: string }
@@ -159,7 +114,7 @@ export class ReasoningHistoryService {
       try {
         if (!this.closed) {
           const payload = await this.payload(run.artifact!);
-          if (payload) result = extractCandyAnswer(this.redact(payload.output, run));
+          if (payload) result = extractAnswer(this.redact(payload.output, run), expectedAnswerOf(run));
         }
       } catch { /* Missing/failed artifact reads are not model mistakes. */ }
       if (!this.closed) {

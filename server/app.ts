@@ -44,6 +44,7 @@ const promptInput = z.object({
   title: z.string().trim().min(1).max(120), description: z.string().max(1000).default(''),
   category: z.enum(['visual', 'reasoning', 'text']), content: z.string().min(1).max(100000).refine(value => value.trim().length > 0, '提示词不能为空。'),
   referenceAnswer: z.string().max(20000).default(''), rubric: z.string().max(20000).default(''),
+  standardAnswer: z.string().trim().regex(/^[+-]?\d+(?:\.\d+)?$/).or(z.literal('')).default(''),
   tags: z.array(z.string().trim().min(1).max(40)).max(15).default([]), enabled: z.boolean().default(true),
 });
 const scheduleInput = z.object({
