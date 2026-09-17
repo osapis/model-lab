@@ -30,7 +30,7 @@ export interface Run {
   parameters: { protocol?: Protocol; maxTokens?: number; reasoningEffort?: string };
   providerId?: string; scheduleId?: string;
   artifactAvailable?: boolean; artifactExpiresAt?: string | null;
-  artifactStorage?: 'memory' | 's3' | 'cloudflare';
+  artifactStorage?: 'memory' | 'disk' | 's3' | 'cloudflare';
   hasHtml?: boolean; cleanupError?: string;
   retryLimit?: number; retryAttempt?: number; retryRootId?: string;
   retryOf?: string; retryKind?: 'automatic' | 'manual'; nextRetryId?: string; retryAt?: string;
@@ -53,7 +53,7 @@ export interface Schedule {
 }
 export interface LabSettings { retentionDays: number; maxRetries?: number; requestTimeoutSeconds?: number }
 export interface StorageSettings {
-  mode: 'memory' | 's3' | 'cloudflare'; endpoint: string; region: string; bucket: string; prefix: string;
+  mode: 'memory' | 'disk' | 's3' | 'cloudflare'; endpoint: string; region: string; bucket: string; prefix: string;
   backend?: 'r2' | 'durable-sqlite';
   hasAccessKeyId: boolean; hasSecretAccessKey: boolean;
   memoryLimitMb: number; memoryUsedMb: number;

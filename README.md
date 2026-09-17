@@ -35,6 +35,8 @@ docker compose exec model-lab cat /app/.data/admin-token
 
 进入后台添加接口和模型，即可运行测试。公网使用前配置 HTTPS；更新、反向代理和数据备份见 [Docker 部署说明](DOCKER_DEPLOY.md)。
 
+向仓库推送 `v*` tag 时，CI 会在测试通过后将镜像发布到 GitHub Container Registry，可按版本拉取，例如 `docker pull ghcr.io/jinshenganyuci/model-lab:v1.0.0`。需要使用宿主机目录或命名卷时，在运行容器或 Compose 文件中自行选择挂载方式。
+
 ## Cloudflare：把提示词交给 AI
 
 [复制完整部署提示词](docs/AI_CLOUDFLARE_PROMPT.md)，向具有终端权限的 AI 提供你自己的 Cloudflare API Token 文件路径。AI 可使用仓库内的安装脚本完成构建、创建独立 Worker、配置 Secrets 和首次初始化。
@@ -49,7 +51,7 @@ Token 仅用于部署控制面，**不是被测模型的 API Key**。模型接�
 
 管理接口需要登录；配置凭证在服务端加密保存，公开接口只返回展示所需字段。**测试结果和生成作品是公开内容**，不要在提示词或模型输出中放入不愿公开的信息。配置备份不包含历史测试、作品或管理员密码；完整备份需要另外保存数据和加密密钥。
 
-Docker 使用本地持久化数据卷保存配置和记录元数据；默认作品正文在内存中，重启后不可恢复，长期保留需配置 R2/S3。Cloudflare 默认在云端 Durable Objects 保存数据和作品，不占用自己的服务器磁盘。具体用量与账单取决于平台套餐和测试频率，开源软件与免费托管均不意味着无限容量或零攻击风险。详见 [安全说明](SECURITY.md)。
+Docker 使用 `/app/.data` 保存配置、记录元数据和密钥；Compose 默认使用命名卷，也可以改成宿主机目录映射。结果正文可在后台选择服务器内存、本地硬盘或 R2/S3：内存模式重启后不可恢复，本地硬盘模式写入 `/app/.data/artifacts`，长期云端保留需配置 R2/S3。Cloudflare 默认在云端 Durable Objects 保存数据和作品，不占用自己的服务器磁盘。具体用量与账单取决于平台套餐和测试频率，开源软件与免费托管均不意味着无限容量或零攻击风险。详见 [安全说明](SECURITY.md)。
 
 ## 本地开发
 

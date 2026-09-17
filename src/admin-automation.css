@@ -64,7 +64,7 @@
 .admin-schedule-save > span { font-size: 11px; color: #8b9e91; margin-right: auto; }
 .admin-schedule-save > span.over-limit { color: #ac7850; }
 .admin-storage-layout { display: grid; grid-template-columns: minmax(0, 1fr) 310px; gap: 22px; align-items: start; }
-.admin-storage-modes { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.admin-storage-modes { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
 .admin-storage-mode { display: flex; align-items: center; gap: 10px; padding: 17px 13px; text-align: left; border: 1px solid #dfe8e2; border-radius: 8px; background: #fff; color: #8da496; min-width: 0; }
 .admin-storage-mode:hover:not(:disabled) { border-color: #adcec0; }
 .admin-storage-mode.selected { background: #f4faf7; border-color: #8bbcab; color: var(--admin-primary); }

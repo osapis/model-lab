@@ -112,7 +112,7 @@ export class Scheduler {
       } catch {
         // Keep the reference and retry next minute if external deletion fails.
         const current = this.store.get<StoredRun>('runs', run.id);
-        if (current) this.store.put('runs', { ...current, cleanupError: '云端正文删除失败；保留历史记录并在下一轮自动重试。' });
+        if (current) this.store.put('runs', { ...current, cleanupError: '作品正文删除失败；保留历史记录并在下一轮自动重试。' });
       }
     }
   }

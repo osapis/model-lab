@@ -266,7 +266,7 @@ export function StorageSettingsPanel({ data, busy, mutate }: PanelProps) {
   const validRetention = Number.isInteger(days) && days >= 1 && days <= 3650;
   const nativeCloud = data.storage.mode === 'cloudflare';
   const cloudBackend = data.storage.backend === 'r2' ? 'R2 对象存储' : data.storage.backend === 'durable-sqlite' ? 'Durable Object SQLite' : 'Cloudflare 原生存储';
-  const validStorage = nativeCloud || draft.mode === 'memory' || (!!draft.endpoint.trim() && !!draft.region.trim() && !!draft.bucket.trim()
+  const validStorage = nativeCloud || draft.mode === 'memory' || draft.mode === 'disk' || (!!draft.endpoint.trim() && !!draft.region.trim() && !!draft.bucket.trim()
     && (!!accessKeyId.trim() || data.storage.hasAccessKeyId) && (!!secretAccessKey.trim() || data.storage.hasSecretAccessKey));
   const storageDirty = nativeCloud ? draft.prefix !== storageDraft(data.storage).prefix : JSON.stringify(draft) !== JSON.stringify(storageDraft(data.storage)) || !!accessKeyId || !!secretAccessKey;
   const memoryPercent = data.storage.memoryLimitMb > 0 ? Math.min(100, Math.max(0, data.storage.memoryUsedMb / data.storage.memoryLimitMb * 100)) : 0;
@@ -285,11 +285,13 @@ export function StorageSettingsPanel({ data, busy, mutate }: PanelProps) {
       <form onSubmit={saveStorage}>
         {nativeCloud ? <div className="admin-storage-info"><div><Cloud size={20} /><p><strong>Cloudflare 云端存储 · {cloudBackend}</strong><br />完整回答、推理文本与 HTML / SVG 作品持久保存在 Cloudflare，按管理员设置的期限与历史记录同步清理。当前部署已绑定存储后端，无需填写 S3 凭据。</p></div><div className="admin-form-grid"><label className="admin-field admin-field-full">作品前缀<input value={draft.prefix} onChange={event => setDraft({ ...draft, prefix: event.target.value })} placeholder="model-lab" maxLength={500} /><small>用于区分当前部署的作品。更改前缀不会迁移或重新生成已有作品。</small></label></div></div> : <><div className="admin-storage-modes" role="group" aria-label="结果存储方式"><button type="button" className={`admin-storage-mode ${draft.mode === 'memory' ? 'selected' : ''}`} aria-pressed={draft.mode === 'memory'} disabled={!!busy} onClick={() => setDraft({ ...draft, mode: 'memory' })}>
           <HardDrive size={20} /><span><strong>服务器内存</strong><small>默认模式 · 临时查看作品</small></span>{draft.mode === 'memory' && <Check size={15} />}</button>
+          <button type="button" className={`admin-storage-mode ${draft.mode === 'disk' ? 'selected' : ''}`} aria-pressed={draft.mode === 'disk'} disabled={!!busy} onClick={() => setDraft({ ...draft, mode: 'disk' })}>
+            <Database size={21} /><span><strong>本地硬盘</strong><small>写入 DATA_DIR · 随卷持久化</small></span>{draft.mode === 'disk' && <Check size={15} />}</button>
           <button type="button" className={`admin-storage-mode ${draft.mode === 's3' ? 'selected' : ''}`} aria-pressed={draft.mode === 's3'} disabled={!!busy} onClick={() => setDraft({ ...draft, mode: 's3' })}>
             <Cloud size={21} /><span><strong>Cloudflare R2</strong><small>也支持 S3 兼容对象存储</small></span>{draft.mode === 's3' && <Check size={15} />}</button></div>
-        {draft.mode === 'memory' ? <div className="admin-storage-info"><div><Info size={17} /><p><strong>完整作品只保存在服务器内存中。</strong>服务重启或缓存淘汰后，完整回答与作品将无法回看，仅保留测试历史摘要。需要持续展示和回看，请配置 R2 / S3。</p></div>
+        {draft.mode === 'memory' ? <div className="admin-storage-info"><div><Info size={17} /><p><strong>完整作品只保存在服务器内存中。</strong>服务重启或缓存淘汰后，完整回答与作品将无法回看，仅保留测试历史摘要。需要持续展示和回看，请配置本地硬盘或 R2 / S3。</p></div>
           <div className="admin-memory-usage"><span>当前内存缓存</span><strong>{data.storage.memoryUsedMb.toFixed(1)} / {data.storage.memoryLimitMb} MB</strong><div className="admin-memory-track" role="progressbar" aria-label="结果内存缓存用量" aria-valuenow={Math.round(memoryPercent)} aria-valuemin={0} aria-valuemax={100}><span style={{ width: `${memoryPercent}%` }} /></div></div>
-        </div> : <div className="admin-storage-s3"><p className="admin-storage-explanation">将后续测试的完整结果存入你自己的私有存储桶。已失效的内存作品不会恢复；过期结果仍按保留时间清理。</p><div className="admin-form-grid">
+        </div> : draft.mode === 'disk' ? <div className="admin-storage-info"><div><Database size={17} /><p><strong>完整作品写入服务器本地硬盘。</strong>文件保存在 <code>DATA_DIR/artifacts</code>，容器重启后仍可读取。请确保 Docker 使用命名卷或将 <code>/app/.data</code> 绑定到宿主机目录，并定期备份。</p></div><p className="admin-storage-explanation">已有失效的内存作品不会恢复；过期结果仍按保留时间清理。</p></div> : <div className="admin-storage-s3"><p className="admin-storage-explanation">将后续测试的完整结果存入你自己的私有存储桶。已失效的内存作品不会恢复；过期结果仍按保留时间清理。</p><div className="admin-form-grid">
           <label className="admin-field admin-field-full">Endpoint<input type="url" placeholder="https://你的账户.r2.cloudflarestorage.com" value={draft.endpoint} onChange={(event) => setDraft({ ...draft, endpoint: event.target.value })} maxLength={2048} required /><small>填写对象存储的 S3 API 地址，不是公开访问域名。</small></label>
           <label className="admin-field">Region<input value={draft.region} onChange={(event) => setDraft({ ...draft, region: event.target.value })} placeholder="auto" maxLength={100} required /><small>Cloudflare R2 使用 auto。</small></label>
           <label className="admin-field">Bucket<input value={draft.bucket} onChange={(event) => setDraft({ ...draft, bucket: event.target.value })} placeholder="例如：model-lab-results" maxLength={255} required /></label>
@@ -298,11 +300,11 @@ export function StorageSettingsPanel({ data, busy, mutate }: PanelProps) {
           <label className="admin-field">Secret Access Key<input type="password" autoComplete="new-password" value={secretAccessKey} onChange={(event) => setSecretAccessKey(event.target.value)} placeholder={data.storage.hasSecretAccessKey ? '已配置，留空保持现有值' : '输入 Secret Access Key'} maxLength={1024} required={!data.storage.hasSecretAccessKey} /><small>凭据仅提交至后端保存。</small></label>
         </div></div>}</>}
         <p className="admin-note"><ShieldCheck size={14} />浏览器不使用 localStorage 或 IndexedDB 保存作品。</p>
-        <div className="admin-form-actions admin-storage-actions"><span className="admin-muted">当前生效：{nativeCloud ? `Cloudflare · ${cloudBackend}` : data.storage.mode === 'memory' ? '服务器内存' : 'R2 / S3'}</span>
-          {(nativeCloud || draft.mode === 's3') && <button type="button" className="admin-button admin-button-small" disabled={!!busy || (!nativeCloud && data.storage.mode !== 's3') || storageDirty} title={storageDirty || (!nativeCloud && data.storage.mode !== 's3') ? '请先保存配置，再验证读写' : '验证已保存配置的写入、读取和删除能力'}
-            onClick={() => { void mutate('storage-test', '/api/admin/storage/test', json('POST'), '结果存储验证通过，读写与删除正常。'); }}>{busy === 'storage-test' ? <Spinner /> : <Cloud size={14} />}{nativeCloud ? '验证云端读写' : '测试连接'}</button>}
+        <div className="admin-form-actions admin-storage-actions"><span className="admin-muted">当前生效：{nativeCloud ? `Cloudflare · ${cloudBackend}` : data.storage.mode === 'memory' ? '服务器内存' : data.storage.mode === 'disk' ? '本地硬盘' : 'R2 / S3'}</span>
+          {(nativeCloud || draft.mode === 's3' || draft.mode === 'disk') && <button type="button" className="admin-button admin-button-small" disabled={!!busy || (!nativeCloud && data.storage.mode !== draft.mode) || storageDirty} title={storageDirty || (!nativeCloud && data.storage.mode !== draft.mode) ? '请先保存配置，再验证读写' : '验证已保存配置的写入、读取和删除能力'}
+            onClick={() => { void mutate('storage-test', '/api/admin/storage/test', json('POST'), '结果存储验证通过，读写与删除正常。'); }}>{busy === 'storage-test' ? <Spinner /> : nativeCloud ? <Cloud size={14} /> : draft.mode === 'disk' ? <Database size={14} /> : <Cloud size={14} />}{nativeCloud ? '验证云端读写' : draft.mode === 'disk' ? '验证本地读写' : '测试连接'}</button>}
           <button className="admin-button admin-button-primary admin-button-small" disabled={!!busy || !validStorage || !storageDirty}>{busy === 'storage-save' ? <Spinner /> : <Check size={14} />}保存存储配置</button>
-        </div>{(nativeCloud || draft.mode === 's3') && (storageDirty || (!nativeCloud && data.storage.mode !== 's3')) && <p className="admin-storage-test-note">先保存配置，再测试对象存储连接。</p>}
+        </div>{(nativeCloud || draft.mode === 's3' || draft.mode === 'disk') && (storageDirty || (!nativeCloud && data.storage.mode !== draft.mode)) && <p className="admin-storage-test-note">先保存配置，再验证存储读写。</p>}
       </form>
     </section>
     <aside className="admin-stack"><section className="admin-panel admin-retention-panel"><div className="admin-section-heading"><div className="admin-step-heading"><span><Archive size={16} /></span><div><h2>历史保留时间</h2><p>控制测试记录和正文的保存期限。</p></div></div></div>
@@ -312,6 +314,6 @@ export function StorageSettingsPanel({ data, busy, mutate }: PanelProps) {
         {validRetention && days < data.settings.retentionDays && <p className="admin-automation-warning"><Info size={13} />缩短保留时间后，超过 {days} 天的历史会自动删除，无法恢复。</p>}
         <button className="admin-button admin-button-primary admin-retention-save" disabled={!!busy || !validRetention || days === data.settings.retentionDays}>{busy === 'retention-save' ? <Spinner /> : <Check size={14} />}保存保留时间</button>
       </form>
-    </section><div className="admin-storage-footnote"><ShieldCheck size={16} /><p>{nativeCloud ? '云端完整作品与测试历史按照保留设置一起清理，无需在本机保存作品文件。' : '历史保留与完整作品存储分别生效。使用内存模式时，作品可能早于历史保留期限失效。'}</p></div></aside>
+    </section><div className="admin-storage-footnote"><ShieldCheck size={16} /><p>{nativeCloud ? '云端完整作品与测试历史按照保留设置一起清理，无需在本机保存作品文件。' : data.storage.mode === 'disk' ? '完整作品保存在 DATA_DIR/artifacts；请把 /app/.data 持久化并纳入备份。' : '历史保留与完整作品存储分别生效。使用内存模式时，作品可能早于历史保留期限失效。'}</p></div></aside>
   </div></div>;
 }

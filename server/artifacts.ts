@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+import { createRequire } from 'node:module';
 import { DeleteObjectCommand, GetObjectCommand, PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
 import { z } from 'zod';
 import type { StorageSettings } from '../shared/types.ts';
@@ -6,7 +7,7 @@ import type { Store } from './store.ts';
 
 export interface ArtifactPayload { output: string; html: string; reasoning: string }
 export interface ArtifactRef {
-  storage: 'memory' | 's3' | 'cloudflare'; key: string; configId?: string; sizeBytes: number;
+  storage: 'memory' | 'disk' | 's3' | 'cloudflare'; key: string; configId?: string; sizeBytes: number;
 }
 export class ArtifactWriteError extends Error {
   constructor(readonly ref: ArtifactRef) {
@@ -15,7 +16,7 @@ export class ArtifactWriteError extends Error {
   }
 }
 export interface StorageInput {
-  mode: 'memory' | 's3' | 'cloudflare'; endpoint?: string; region?: string; bucket?: string;
+  mode: 'memory' | 'disk' | 's3' | 'cloudflare'; endpoint?: string; region?: string; bucket?: string;
   prefix?: string; accessKeyId?: string; secretAccessKey?: string;
 }
 export interface NativeR2Configuration { mode: 's3'; driver: 'r2-binding'; prefix: string }
@@ -32,7 +33,7 @@ export const ARTIFACT_MAX_BYTES = 12 * 1024 * 1024;
 export const ARTIFACT_MEMORY_LIMIT_BYTES = 64 * 1024 * 1024;
 const OPERATION_TIMEOUT_MS = 30_000;
 const inputSchema = z.object({
-  mode: z.enum(['memory', 's3']), endpoint: z.string().trim().max(2048).optional(),
+  mode: z.enum(['memory', 'disk', 's3']), endpoint: z.string().trim().max(2048).optional(),
   region: z.string().trim().max(100).optional(), bucket: z.string().trim().max(255).optional(),
   prefix: z.string().trim().max(500).optional(), accessKeyId: z.string().trim().max(512).optional(),
   secretAccessKey: z.string().trim().max(1024).optional(),
@@ -88,16 +89,25 @@ function missingObject(error: unknown): boolean {
   return details.name === 'NoSuchKey' || details.name === 'NotFound';
 }
 
-/** Metadata and encrypted configuration persist; generated bodies never touch local files. */
+/** Metadata and encrypted configuration persist; generated bodies use the selected backend. */
 export class ArtifactStore {
   private memory = new Map<string, Buffer>();
   private memoryBytes = 0;
+  private readonly diskRoot?: string;
+  private readonly diskFs?: typeof import('node:fs/promises');
+  private readonly diskPathApi?: typeof import('node:path');
   private operations = new Set<AbortController>();
   private inFlight = new Set<string>();
   private cleaningPending = false;
   private closed = false;
 
   constructor(private store: Store) {
+    if (store.dataDir) {
+      const nodeLoader = createRequire(import.meta.url);
+      this.diskFs = nodeLoader('node:fs/promises') as typeof import('node:fs/promises');
+      this.diskPathApi = nodeLoader('node:path') as typeof import('node:path');
+      this.diskRoot = this.diskPathApi.resolve(store.dataDir, 'artifacts');
+    }
     store.db.exec(`CREATE TABLE IF NOT EXISTS artifact_configs (
       id TEXT PRIMARY KEY, data TEXT NOT NULL, is_current INTEGER NOT NULL DEFAULT 0, created_at TEXT NOT NULL
     ); CREATE UNIQUE INDEX IF NOT EXISTS artifact_configs_current ON artifact_configs(is_current) WHERE is_current = 1;
@@ -135,8 +145,8 @@ export class ArtifactStore {
     return {
       mode: config.mode, endpoint: config.endpoint, region: config.region, bucket: config.bucket, prefix: config.prefix,
       hasAccessKeyId: Boolean(config.accessKeyId), hasSecretAccessKey: Boolean(config.secretAccessKey),
-      memoryLimitMb: ARTIFACT_MEMORY_LIMIT_BYTES / 1024 / 1024,
-      memoryUsedMb: Math.round(this.memoryBytes / 1024 / 1024 * 100) / 100,
+      memoryLimitMb: config.mode === 'memory' ? ARTIFACT_MEMORY_LIMIT_BYTES / 1024 / 1024 : 0,
+      memoryUsedMb: config.mode === 'memory' ? Math.round(this.memoryBytes / 1024 / 1024 * 100) / 100 : 0,
     };
   }
 
@@ -148,6 +158,9 @@ export class ArtifactStore {
       accessKeyId: parsed.data.accessKeyId || previous.accessKeyId,
       secretAccessKey: parsed.data.secretAccessKey || previous.secretAccessKey,
     });
+    if (next.mode === 'disk' && (!this.diskRoot || !this.diskFs || !this.diskPathApi)) {
+      throw new Error('本地硬盘存储仅支持 Node/Docker 运行方式。');
+    }
     if (JSON.stringify(next) !== JSON.stringify(previous)) this.save({ ...next, id: randomUUID() });
     return this.status();
   }
@@ -164,6 +177,9 @@ export class ArtifactStore {
     // target storage while the surrounding transaction restores the other settings.
     if ('driver' in input) return;
     const config = validateStorageImport(input);
+    if (config.mode === 'disk' && (!this.diskRoot || !this.diskFs || !this.diskPathApi)) {
+      throw new Error('本地硬盘存储仅支持 Node/Docker 运行方式。');
+    }
     this.save({ ...config, id: randomUUID() }, true);
     // Configuration is read from SQLite, with no cache to pollute on rollback.
   }
@@ -175,16 +191,26 @@ export class ArtifactStore {
 
   private refId(ref: ArtifactRef): string { return `${ref.configId}:${ref.key}`; }
 
-  /** Register the remote key before any network write, including writes whose response may be lost. */
+  private localPath(ref: ArtifactRef): string {
+    if (!this.diskRoot || !this.diskPathApi) throw new Error('本地硬盘存储仅支持 Node/Docker 运行方式。');
+    const target = this.diskPathApi.resolve(this.diskRoot, ref.key);
+    const relative = this.diskPathApi.relative(this.diskRoot, target);
+    if (!relative || relative === '..' || relative.startsWith(`..${this.diskPathApi.sep}`) || this.diskPathApi.isAbsolute(relative)) {
+      throw new Error('本地正文路径无效。');
+    }
+    return target;
+  }
+
+  /** Register a durable key before writing, so uncertain writes can be cleaned up. */
   private journal(ref: ArtifactRef): void {
-    if (ref.storage !== 's3' || !ref.configId) return;
+    if (!['disk', 's3'].includes(ref.storage) || !ref.configId) return;
     this.store.db.prepare('INSERT OR IGNORE INTO artifact_pending(config_id, object_key, data, created_at) VALUES (?, ?, ?, ?)')
       .run(ref.configId, ref.key, JSON.stringify(ref), new Date().toISOString());
   }
 
   /** Call only after the run has durably saved its artifact reference. */
   ack(ref: ArtifactRef): void {
-    if (ref.storage !== 's3' || !ref.configId) return;
+    if (!['disk', 's3'].includes(ref.storage) || !ref.configId) return;
     this.store.db.prepare('DELETE FROM artifact_pending WHERE config_id = ? AND object_key = ?').run(ref.configId, ref.key);
   }
 
@@ -221,6 +247,26 @@ export class ArtifactStore {
     return { storage: 'memory', key, sizeBytes: body.byteLength };
   }
 
+  private async putDisk(runId: string, payload: ArtifactPayload, config: Config): Promise<ArtifactRef> {
+    if (!this.diskFs || !this.diskPathApi) throw new Error('本地硬盘存储仅支持 Node/Docker 运行方式。');
+    const body = serialize(payload);
+    const ref: ArtifactRef = { storage: 'disk', key: this.key(runId, config.prefix), configId: config.id, sizeBytes: body.byteLength };
+    this.journal(ref);
+    this.inFlight.add(this.refId(ref));
+    let temporary = '';
+    try {
+      const target = this.localPath(ref);
+      temporary = `${target}.${randomUUID()}.tmp`;
+      await this.diskFs.mkdir(this.diskPathApi.dirname(target), { recursive: true, mode: 0o700 });
+      await this.diskFs.writeFile(temporary, body, { flag: 'wx', mode: 0o600 });
+      await this.diskFs.rename(temporary, target);
+      return ref;
+    } catch {
+      try { await this.diskFs.unlink(temporary); } catch { /* Keep the durable journal for the target path. */ }
+      throw new ArtifactWriteError(ref);
+    } finally { this.inFlight.delete(this.refId(ref)); }
+  }
+
   private async withS3<T>(config: Config, operation: (client: S3Client, signal: AbortSignal) => Promise<T>): Promise<T> {
     if (this.closed) throw new Error('对象存储服务正在关闭。');
     const controller = new AbortController();
@@ -239,6 +285,7 @@ export class ArtifactStore {
   async put(runId: string, payload: ArtifactPayload): Promise<ArtifactRef> {
     const config = this.config();
     if (config.mode === 'memory') return this.putMemory(runId, payload);
+    if (config.mode === 'disk') return this.putDisk(runId, payload, config);
     const body = serialize(payload);
     const key = this.key(runId, config.prefix);
     const ref: ArtifactRef = { storage: 's3', key, configId: config.id, sizeBytes: body.byteLength };
@@ -261,6 +308,20 @@ export class ArtifactStore {
     if (ref.storage === 'memory') {
       const body = this.memory.get(ref.key);
       return body ? JSON.parse(Buffer.from(body).toString('utf8')) as ArtifactPayload : null;
+    }
+    if (ref.storage === 'disk') {
+      if (!this.diskFs) throw new Error('本地硬盘存储仅支持 Node/Docker 运行方式。');
+      try {
+        const target = this.localPath(ref);
+        const info = await this.diskFs.lstat(target);
+        if (!info.isFile() || info.size > ARTIFACT_MAX_BYTES) throw new Error('Invalid artifact body');
+        const body = await this.diskFs.readFile(target);
+        if (body.byteLength > ARTIFACT_MAX_BYTES) throw new Error('Artifact too large');
+        return payloadSchema.parse(JSON.parse(Buffer.from(body).toString('utf8')));
+      } catch (error) {
+        if (error && typeof error === 'object' && (error as NodeJS.ErrnoException).code === 'ENOENT') return null;
+        throw new Error('本地正文读取失败，请检查数据目录和正文格式。');
+      }
     }
     if (!ref.configId) throw new Error('历史正文缺少对象存储配置引用。');
     const config = this.config(ref.configId);
@@ -290,6 +351,17 @@ export class ArtifactStore {
       if (body) { this.memoryBytes -= body.byteLength; this.memory.delete(ref.key); }
       return;
     }
+    if (ref.storage === 'disk') {
+      if (!this.diskFs) throw new Error('本地硬盘存储仅支持 Node/Docker 运行方式。');
+      try { await this.diskFs.unlink(this.localPath(ref)); }
+      catch (error) {
+        if (!(error && typeof error === 'object' && (error as NodeJS.ErrnoException).code === 'ENOENT')) {
+          throw new Error('本地正文删除失败，请检查数据目录权限。');
+        }
+      }
+      this.ack(ref);
+      return;
+    }
     if (!ref.configId) throw new Error('历史正文缺少对象存储配置引用。');
     const config = this.config(ref.configId);
     try {
@@ -304,21 +376,18 @@ export class ArtifactStore {
     const config = this.config();
     if (config.mode === 'memory') return;
     const payload = { output: `storage-test-${randomUUID()}`, html: '', reasoning: '' };
-    const body = serialize(payload);
-    const ref: ArtifactRef = { storage: 's3', key: this.key('connection-test', config.prefix), configId: config.id, sizeBytes: body.byteLength };
-    this.journal(ref);
-    this.inFlight.add(this.refId(ref));
+    let ref: ArtifactRef | undefined;
     try {
-      await this.withS3(config, (client, signal) => client.send(new PutObjectCommand({
-        Bucket: config.bucket, Key: ref.key, Body: body, ContentType: 'application/json', CacheControl: 'no-store',
-      }), { abortSignal: signal }));
+      ref = await this.put('connection-test', payload);
       const result = await this.get(ref);
       if (result?.output !== payload.output) throw new Error('Artifact verification failed');
-    } catch { throw new Error('对象存储连接测试失败，请检查配置及对象写入、读取权限。'); }
+    } catch (error) {
+      if (error instanceof ArtifactWriteError) ref = error.ref;
+      throw new Error('对象存储连接测试失败，请检查配置及对象写入、读取权限。');
+    }
     finally {
-      try { await this.delete(ref); }
+      try { if (ref) await this.delete(ref); }
       catch { throw new Error('对象存储连接测试的临时对象清理失败，请检查删除权限。'); }
-      finally { this.inFlight.delete(this.refId(ref)); }
     }
   }
 

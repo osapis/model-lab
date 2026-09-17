@@ -185,12 +185,12 @@ export function RecordCleanup({ cleanup, runs, scope, hasFilters, unavailable }:
     {summary && <div className={`admin-cleanup-result ${summary.failures.length ? 'has-errors' : ''}`} role="status">
       <strong><CheckCircle2 size={16} />清理完成：已删除 {summary.deletedIds.length} 条</strong>
       <p>已不存在 {summary.missingIds.length} 条 · 运行中跳过 {summary.skippedIds.length} 条 · 删除失败 {summary.failures.length} 条</p>
-      {(summary.failures.length > 0 || summary.skippedIds.length > 0) && <p>运行中的任务已跳过；失败项保留在选择列表，可刷新确认或重试。云端作品未删除成功的记录不会计入成功数。</p>}
+      {(summary.failures.length > 0 || summary.skippedIds.length > 0) && <p>运行中的任务已跳过；失败项保留在选择列表，可刷新确认或重试。作品正文未删除成功的记录不会计入成功数。</p>}
       {summary.failures.length > 0 && <><details><summary>查看失败原因（{summary.failures.length} 条）</summary><ul>{summary.failures.map((failure) => <li key={failure.id}><code>{failure.id.slice(0, 12)}</code>：{failure.error}</li>)}</ul></details><button type="button" className="admin-button admin-button-small" disabled={disabled} onClick={cleanup.selectFailed}>选择失败项后重试（{summary.failures.length}）</button></>}
     </div>}
     {snapshot && <div className="admin-cleanup-confirm" role="group" aria-labelledby="cleanup-confirm-title">
       <strong id="cleanup-confirm-title">确认永久删除这 {snapshot.runs.length} 条测试记录？</strong>
-      <p>其中包含 <b>{snapshot.runs.filter((run) => run.source === 'sample').length} 条会话子代理样例</b>。所选记录的原始回答及 SVG / HTML 作品将一起删除，包括对应的云端作品，无法恢复。</p>
+      <p>其中包含 <b>{snapshot.runs.filter((run) => run.source === 'sample').length} 条会话子代理样例</b>。所选记录的原始回答及 SVG / HTML 作品将一起删除，包括对应的本地或远程正文，无法恢复。</p>
       <p>选择时的筛选范围：{snapshot.scope}</p>
       <div className="admin-cleanup-actions"><button type="button" className="admin-button admin-button-danger" disabled={disabled} onClick={() => cleanup.confirmDelete()}>{cleanup.phase === 'deleting' ? <LoaderCircle size={15} className="admin-spin" /> : <Trash2 size={15} />}确认删除 {snapshot.runs.length} 条</button><button type="button" className="admin-button" disabled={cleanup.locked} onClick={cleanup.cancelConfirmation}><X size={15} />取消</button></div>
     </div>}

@@ -12,7 +12,7 @@ export interface ConfigBackupSchedulePreview {
   cronExpression: string; timezone: string;
 }
 export interface ConfigBackupPreview extends ConfigBackupCounts {
-  retentionDays: number; maxRetries: number; requestTimeoutSeconds: number; storageMode: 'memory' | 's3' | 'cloudflare'; createdAt: string;
+  retentionDays: number; maxRetries: number; requestTimeoutSeconds: number; storageMode: 'memory' | 'disk' | 's3' | 'cloudflare'; createdAt: string;
   scheduleDetails: ConfigBackupSchedulePreview[];
 }
 export interface ConfigBackupImportResult { imported: ConfigBackupCounts }

@@ -36,6 +36,7 @@ export interface InjectedStoreOptions {
   transaction: SyncTransaction;
   encryptionKey: Uint8Array;
   adminToken: string;
+  dataDir?: string;
 }
 
 function localStoreOptions(directory: string, adminToken?: string): InjectedStoreOptions {
@@ -62,7 +63,7 @@ function localStoreOptions(directory: string, adminToken?: string): InjectedStor
   chmodSync(databasePath, 0o600);
   database.exec('PRAGMA journal_mode=WAL; PRAGMA busy_timeout=5000; PRAGMA secure_delete=ON;');
   return {
-    database, encryptionKey, adminToken: token,
+    database, encryptionKey, adminToken: token, dataDir: directory,
     transaction: <T>(fn: () => T): T => {
       database.exec('BEGIN');
       try { const value = fn(); database.exec('COMMIT'); return value; }
@@ -96,6 +97,7 @@ function normalizeEntity<T extends Entity>(table: Table, entity: T): T {
 
 export class Store {
   db: SyncDatabase;
+  readonly dataDir?: string;
   private key: Buffer;
   private transactionSync: SyncTransaction;
   adminToken: string;
@@ -109,6 +111,7 @@ export class Store {
     if (!options.adminToken) throw new Error('管理口令不能为空。');
     if (typeof options.transaction !== 'function') throw new Error('存储层必须提供同步事务适配器。');
     this.db = options.database;
+    this.dataDir = typeof directoryOrOptions === 'string' ? directoryOrOptions : options.dataDir;
     // Copy the supplied bytes so later mutation by the caller cannot rotate the key.
     this.key = Buffer.from(options.encryptionKey);
     this.adminToken = options.adminToken;
@@ -136,7 +139,7 @@ export class Store {
     return row ? normalizeEntity(table, JSON.parse(row.data as string) as T) : undefined;
   }
   put<T extends Entity>(table: Table, entity: T) {
-    // Generated bodies belong in memory or external object storage, never SQLite.
+    // Generated bodies belong in the selected artifact backend, never SQLite.
     const normalized = normalizeEntity(table, entity);
     const stored = table === 'runs' ? { ...normalized, output: '', html: '', reasoning: '' } : normalized;
     this.db.prepare(`INSERT INTO ${table}(id, data) VALUES (?, ?) ON CONFLICT(id) DO UPDATE SET data = excluded.data`).run(entity.id, JSON.stringify(stored));

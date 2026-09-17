@@ -185,7 +185,7 @@ export class RunQueue {
       const provider = this.store.get<StoredProvider>('providers', current.providerId || '');
       const retentionDays = provider?.retentionDays ?? this.store.settings().retentionDays;
       this.store.put('runs', { ...current, ...metadata, artifact, pendingArtifactDeletes,
-        cleanupError: pendingArtifactDeletes.length ? '上游存储写入状态不确定，系统将自动清理可能残留的对象。' : current.cleanupError,
+        cleanupError: pendingArtifactDeletes.length ? '正文写入状态不确定，系统将自动清理可能残留的文件或对象。' : current.cleanupError,
         artifactAvailable: Boolean(artifact), artifactStorage: artifact?.storage, hasHtml: Boolean(html),
         artifactExpiresAt: new Date(this.clock() + retentionDays * 86_400_000).toISOString(),
         status: metadata.error ? 'failed' : 'completed',

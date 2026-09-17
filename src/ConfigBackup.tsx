@@ -18,7 +18,7 @@ type Props = {
 };
 const fileLimitLabel = `${CONFIG_BACKUP_MAX_BYTES / 1024 / 1024} MiB`;
 const passwordValid = (password: string) => password.length >= CONFIG_BACKUP_MIN_PASSWORD_LENGTH && password.length <= CONFIG_BACKUP_MAX_PASSWORD_LENGTH;
-const storageLabel = (mode: AdminData['storage']['mode']) => mode === 'cloudflare' ? 'Cloudflare 原生云端' : mode === 's3' ? 'Cloudflare R2 / S3' : '服务器内存';
+const storageLabel = (mode: AdminData['storage']['mode']) => mode === 'cloudflare' ? 'Cloudflare 原生云端' : mode === 's3' ? 'Cloudflare R2 / S3' : mode === 'disk' ? '本地硬盘' : '服务器内存';
 const failureMessage = (error: unknown) => error instanceof Error ? error.message : '操作失败，请稍后重试。';
 const countLabels = { providers: 'API 接口', models: '参测模型', prompts: '提示词', schedules: '定时计划' } as const;
 

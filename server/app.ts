@@ -162,7 +162,7 @@ export function createApp(options: AppOptions = {}) {
       try { await artifacts.delete(ref); }
       catch {
         const current = store.get<StoredRun>('runs', id);
-        if (current) store.put('runs', { ...current, cleanupError: '云端残留正文删除失败，系统将在下一轮自动重试。' });
+        if (current) store.put('runs', { ...current, cleanupError: '残留正文删除失败，系统将在下一轮自动重试。' });
         throw new Error('Artifact cleanup failed');
       }
       const current = store.get<StoredRun>('runs', id);
@@ -404,7 +404,7 @@ export function createApp(options: AppOptions = {}) {
   app.put('/api/admin/storage', storageUpdate);
   app.patch('/api/admin/storage', storageUpdate);
   function storageUpdate(request: Request, response: Response) {
-    const input = z.object({ mode: z.enum(['memory', 's3', 'cloudflare']), endpoint: z.string().max(2048).optional(), region: z.string().max(100).optional(),
+    const input = z.object({ mode: z.enum(['memory', 'disk', 's3', 'cloudflare']), endpoint: z.string().max(2048).optional(), region: z.string().max(100).optional(),
       bucket: z.string().max(200).optional(), prefix: z.string().max(200).optional(), accessKeyId: z.string().max(8192).optional(), secretAccessKey: z.string().max(8192).optional(),
     }).parse(request.body);
     try { response.json({ storage: artifacts.configure(input) }); }
@@ -524,7 +524,7 @@ export function createApp(options: AppOptions = {}) {
     if (['queued', 'running'].includes(run.status)) throw new HttpError(409, '进行中的任务不能删除，请先取消。');
     try { await deleteRunArtifacts(run.id); } catch {
       const current = store.get<StoredRun>('runs', run.id);
-      if (current) store.put('runs', { ...current, cleanupError: '云端正文删除失败，历史记录已保留，请稍后重试。' });
+      if (current) store.put('runs', { ...current, cleanupError: '作品正文删除失败，历史记录已保留，请稍后重试。' });
       throw new HttpError(502, '结果对象删除失败，历史记录已保留，请稍后重试。');
     }
     store.delete('runs', run.id); response.json({ ok: true });

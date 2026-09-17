@@ -122,6 +122,23 @@ test('memory FIFO stays within 64 MB, preserves recent bodies and rejects oversi
   await assert.rejects(f.artifacts.put('utf8-size', { ...PAYLOAD, output: '糖'.repeat(5 * 1024 * 1024) }), /12 MB/);
 });
 
+test('disk storage writes bodies under DATA_DIR and survives restart', async t => {
+  const f = await fixture(t);
+  f.artifacts.configure({ mode: 'disk', prefix: 'generated/results' });
+  assert.equal(f.artifacts.status().mode, 'disk');
+  assert.equal(f.artifacts.status().memoryLimitMb, 0);
+  const ref = await f.artifacts.put('disk-run', PAYLOAD);
+  assert.equal(ref.storage, 'disk');
+  const file = join(f.directory, 'artifacts', ...ref.key.split('/'));
+  assert.deepEqual(JSON.parse((await readFile(file)).toString('utf8')), PAYLOAD);
+  assert.deepEqual(await f.artifacts.get(ref), PAYLOAD);
+  await f.restart();
+  const restored = await f.artifacts.get(ref);
+  assert.deepEqual(restored, PAYLOAD);
+  await f.artifacts.delete(ref);
+  await assert.rejects(readFile(file), (error: unknown) => (error as NodeJS.ErrnoException).code === 'ENOENT');
+});
+
 test('S3 configuration is encrypted, blank keys preserve secrets and historic configurations keep working', async t => {
   const mock = await mockS3(t);
   const f = await fixture(t);
