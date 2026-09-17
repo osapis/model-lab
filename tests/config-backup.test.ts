@@ -44,7 +44,7 @@ type Payload = Record<string, unknown> & {
 function configure(f: Fixture, prefix = 'source') {
   const provider: StoredProvider = {
     id: randomUUID(), name: `${prefix} API`, baseUrl: 'https://api.example.invalid/v1',
-    protocol: 'responses', enabled: true, createdAt: CREATED_AT, retentionDays: 9,
+    protocol: 'responses', simulateCodexClient: true, enabled: true, createdAt: CREATED_AT, retentionDays: 9,
     encryptedApiKey: f.store.encrypt(API_SECRET),
   };
   const model: Model = {
@@ -166,6 +166,7 @@ test('encrypted configuration transfers credentials and remaps IDs across distin
   const payload = await decrypt(backup);
   assert.deepEqual(payload.settings, { retentionDays: 17, maxRetries: 7, requestTimeoutSeconds: 720 });
   assert.equal(payload.providers[0]!.apiKey, API_SECRET);
+  assert.equal(payload.providers[0]!.simulateCodexClient, true);
   assert.equal(payload.storage.accessKeyId, ACCESS_SECRET);
   assert.equal(payload.storage.secretAccessKey, STORAGE_SECRET);
   assert.deepEqual(Object.keys(payload).sort(), ['createdAt', 'models', 'prompts', 'providers', 'schedules', 'settings', 'storage', 'version']);
@@ -195,6 +196,7 @@ test('encrypted configuration transfers credentials and remaps IDs across distin
     assert.notEqual(received.id, previous.id, 'Import must generate fresh IDs');
   }
   assert.equal(target.store.decrypt(provider.encryptedApiKey), API_SECRET);
+  assert.equal(provider.simulateCodexClient, true);
   assert.notEqual(provider.encryptedApiKey, original.provider.encryptedApiKey);
   assert.equal(model.providerId, provider.id);
   assert.equal(model.reasoningEffort, 'max');

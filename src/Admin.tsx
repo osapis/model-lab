@@ -323,6 +323,7 @@ function ProviderEditor({ provider, globalRetentionDays, busy, mutate, onClose }
   const [name, setName] = useState(provider?.name ?? '');
   const [baseUrl, setBaseUrl] = useState(provider?.baseUrl ?? '');
   const [protocol, setProtocol] = useState<Provider['protocol']>(provider?.protocol ?? 'chat-completions');
+  const [simulateCodexClient, setSimulateCodexClient] = useState(provider?.simulateCodexClient ?? false);
   const [apiKey, setApiKey] = useState('');
   const [enabled, setEnabled] = useState(provider?.enabled ?? true);
   const [retentionDays, setRetentionDays] = useState(provider?.retentionDays == null ? '' : String(provider.retentionDays));
@@ -330,6 +331,7 @@ function ProviderEditor({ provider, globalRetentionDays, busy, mutate, onClose }
     event.preventDefault();
     if (await mutate('provider-save', `/api/admin/providers${provider ? `/${provider.id}` : ''}`, json(provider ? 'PUT' : 'POST', {
       name: name.trim(), baseUrl: baseUrl.trim(), protocol, apiKey: apiKey.trim(), enabled,
+      simulateCodexClient,
       retentionDays: retentionDays === '' ? null : Number(retentionDays),
     }), '接口配置已保存。')) onClose();
   }
@@ -340,6 +342,7 @@ function ProviderEditor({ provider, globalRetentionDays, busy, mutate, onClose }
       <label className="admin-field admin-field-full">API Key<input type="password" value={apiKey} onChange={(event) => setApiKey(event.target.value)} placeholder={provider?.hasApiKey ? '已设置密钥，留空保留原密钥' : '输入 API Key；无鉴权接口可留空'} autoComplete="new-password" />{provider?.apiKeyPreview && <small className="admin-current-key">当前已保存：<code className="admin-saved-key">{provider.apiKeyPreview}</code></small>}<small>密钥在服务器端加密保存，后台仅展示首尾缩略值。{provider?.hasApiKey ? '修改时留空会保留原值。' : ''}</small></label>
       <label className="admin-field admin-field-full">此接口的历史保留天数（可选）<input type="number" min={1} max={3650} step={1} value={retentionDays} onChange={(event) => setRetentionDays(event.target.value)} placeholder={`留空跟随全局：${globalRetentionDays} 天`} /><small>保存后按此期限自动清理过期历史及外部存储中的作品正文。留空使用全局设置。</small></label>
     </div><label className="admin-checkbox-label"><input type="checkbox" checked={enabled} onChange={(event) => setEnabled(event.target.checked)} />启用此接口</label>
+    <label className="admin-checkbox-label"><input type="checkbox" checked={simulateCodexClient} onChange={(event) => setSimulateCodexClient(event.target.checked)} />模拟 Codex 客户端</label>
     <FormActions busy={!!busy} saving={busy === 'provider-save'} onClose={onClose} />
   </form></EditorFrame>;
 }

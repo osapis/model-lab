@@ -2,7 +2,7 @@ export type Category = 'visual' | 'reasoning' | 'text';
 export type Protocol = 'chat-completions' | 'responses';
 export interface Provider {
   id: string; name: string; baseUrl: string; protocol: Protocol;
-  enabled: boolean; hasApiKey: boolean; createdAt: string;
+  simulateCodexClient?: boolean; enabled: boolean; hasApiKey: boolean; createdAt: string;
   retentionDays?: number | null; apiKeyPreview?: string;
 }
 export interface Model {

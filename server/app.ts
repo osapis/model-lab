@@ -32,6 +32,7 @@ const baseUrl = z.string().trim().min(1).max(2048).refine(value => {
 }, 'API 地址必须是 http/https，且不包含用户名、密码、查询参数或片段。').transform(value => value.replace(/\/+$/, ''));
 const providerInput = z.object({
   name: z.string().trim().min(1).max(100), baseUrl, protocol: z.enum(['chat-completions', 'responses']),
+  simulateCodexClient: z.boolean().default(false),
   enabled: z.boolean().default(true), retentionDays: z.number().int().min(1).max(3650).nullable().default(null), apiKey: z.string().trim().max(8192).optional().default(''),
 });
 const modelInput = z.object({

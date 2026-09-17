@@ -82,7 +82,8 @@ export class CloudRunQueue {
       requestTimeoutSeconds: this.configuredTimeoutSeconds(),
       parameters: { protocol: provider.protocol, maxTokens: model.maxTokens, reasoningEffort },
       execution: { providerId: provider.id, baseUrl: provider.baseUrl, encryptedApiKey: provider.encryptedApiKey,
-        protocol: provider.protocol, modelId: model.modelId, maxTokens: model.maxTokens, reasoningEffort },
+        protocol: provider.protocol, modelId: model.modelId, simulateCodexClient: provider.simulateCodexClient ?? false,
+        maxTokens: model.maxTokens, reasoningEffort },
     };
   }
   enqueue(runs: StoredRun[]): void {

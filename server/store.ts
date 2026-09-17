@@ -10,7 +10,7 @@ import { normalizeRequestTimeoutSeconds } from '../shared/timeouts.ts';
 export interface StoredProvider extends Omit<Provider, 'hasApiKey' | 'apiKeyPreview'> { encryptedApiKey: string }
 export interface ExecutionSnapshot {
   providerId: string; baseUrl: string; encryptedApiKey: string;
-  protocol: Provider['protocol']; modelId: string;
+  protocol: Provider['protocol']; modelId: string; simulateCodexClient?: boolean;
   maxTokens: number; reasoningEffort: string;
 }
 export interface StoredRun extends Run { execution?: ExecutionSnapshot; artifact?: ArtifactRef; pendingArtifactDeletes?: ArtifactRef[] }
@@ -224,6 +224,7 @@ export function providerDto(provider: StoredProvider, store: Pick<Store, 'decryp
   }
   return {
     id: provider.id, name: provider.name, baseUrl: provider.baseUrl, protocol: provider.protocol,
+    simulateCodexClient: provider.simulateCodexClient ?? false,
     enabled: provider.enabled, createdAt: provider.createdAt,
     retentionDays: provider.retentionDays ?? null, hasApiKey: Boolean(provider.encryptedApiKey), apiKeyPreview,
   };

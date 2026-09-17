@@ -86,7 +86,10 @@ async function fixture(t: TestContext, options: AppOptions = {}) {
 }
 
 type Fixture = Awaited<ReturnType<typeof fixture>>;
-type UpstreamRequest = { url: string; authorization: string | undefined; body: Record<string, unknown> };
+type UpstreamRequest = {
+  url: string; authorization: string | undefined; codexVersion: string | undefined;
+  userAgent: string | undefined; body: Record<string, unknown>;
+};
 
 async function upstream(t: TestContext, handler: (request: UpstreamRequest, response: ServerResponse) => void | Promise<void>) {
   const requests: UpstreamRequest[] = [];
@@ -97,6 +100,8 @@ async function upstream(t: TestContext, handler: (request: UpstreamRequest, resp
       const captured = {
         url: request.url || '',
         authorization: request.headers.authorization,
+        codexVersion: request.headers['x-codex-v'] as string | undefined,
+        userAgent: request.headers['user-agent'],
         body: body ? JSON.parse(body) as Record<string, unknown> : {},
       };
       requests.push(captured);
@@ -420,8 +425,45 @@ test('responses protocol sends the exact prompt and aggregates every message out
   assert.equal(request.body.input, content);
   assert.equal(request.body.max_output_tokens, 512);
   assert.equal('temperature' in request.body, false);
-  assert.equal(request.body.stream, false);
+  assert.equal(request.body.stream, true);
+  assert.equal(request.codexVersion, undefined);
   assert.equal('messages' in request.body, false);
+});
+
+test('responses calls stream and codex client simulation can be enabled and disabled', async (t) => {
+  const mock = await upstream(t, (_request, response) => reply(response, {
+    status: 'completed', output: [{ type: 'message', role: 'assistant', content: [{ type: 'output_text', text: '完成' }] }],
+    usage: { input_tokens: 3, output_tokens: 4 },
+  }));
+  const f = await fixture(t);
+  await f.login();
+  await f.json('/api/admin/settings', 'PATCH', { maxRetries: 0 });
+  const { provider } = await f.json<{ provider: Provider }>('/api/admin/providers', 'POST', {
+    name: '模拟 Codex 客户端', baseUrl: `${mock.url}/v1`, protocol: 'responses',
+    simulateCodexClient: true, apiKey: API_KEY, enabled: true,
+  });
+  const { model } = await f.json<{ model: Model }>('/api/admin/models', 'POST', {
+    providerId: provider.id, name: '模拟模型', modelId: 'mock-model', enabled: true,
+    maxTokens: 128, reasoningEffort: 'medium',
+  });
+  const { prompt } = await f.json<{ prompt: Prompt }>('/api/admin/prompts', 'POST', {
+    title: '流式测试', description: '', category: 'text', content: '回答：完成',
+    referenceAnswer: '', rubric: '', tags: [], enabled: true,
+  });
+  const enabled = await waitForRun(f, (await start(f, model, prompt)).id);
+  assert.equal(enabled.status, 'completed');
+  assert.equal(mock.requests[0]!.codexVersion, '1.0.0');
+  assert.equal(mock.requests[0]!.userAgent, 'Codex Desktop/0.155.0-alpha.2.6 (Windows 10.0.26200; x86_64) unknown (Codex Desktop; 26.911.61220)');
+  assert.equal(mock.requests[0]!.body.stream, true);
+
+  await f.json<{ provider: Provider }>(`/api/admin/providers/${provider.id}`, 'PUT', {
+    ...provider, apiKey: '', simulateCodexClient: false,
+  });
+  const disabled = await waitForRun(f, (await start(f, model, prompt)).id);
+  assert.equal(disabled.status, 'completed');
+  assert.equal(mock.requests[1]!.codexVersion, undefined);
+  assert.notEqual(mock.requests[1]!.userAgent, 'Codex Desktop/0.155.0-alpha.2.6 (Windows 10.0.26200; x86_64) unknown (Codex Desktop; 26.911.61220)');
+  assert.equal(mock.requests[1]!.body.stream, true);
 });
 
 test('max reasoning maps to each upstream protocol and legacy temperature is never sent', async (t) => {

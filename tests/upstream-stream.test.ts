@@ -14,17 +14,23 @@ const completed = (output: string) => ({ type: 'response.completed', response: {
 const chatDelta = (content: string, finish: string | null = null) => ({ choices: [{ index: 0, delta: { content }, finish_reason: finish }] });
 
 async function fixture(t: TestContext, handler: (response: ServerResponse) => void | Promise<void>) {
-  const requests: { path: string; body: Record<string, any>; authorization?: string }[] = [];
+  const requests: {
+    path: string; body: Record<string, any>; authorization?: string; codexVersion?: string; userAgent?: string;
+  }[] = [];
   const server = createServer(async (request, response) => {
     let body = ''; for await (const chunk of request) body += chunk;
-    requests.push({ path: request.url!, body: JSON.parse(body), authorization: request.headers.authorization });
+    requests.push({
+      path: request.url!, body: JSON.parse(body), authorization: request.headers.authorization,
+      codexVersion: request.headers['x-codex-v'] as string | undefined, userAgent: request.headers['user-agent'],
+    });
     await handler(response);
   });
   await new Promise<void>(resolve => server.listen(0, '127.0.0.1', resolve));
   const address = server.address(); assert.ok(address && typeof address !== 'string');
   t.after(async () => { server.closeAllConnections(); await new Promise<void>(resolve => server.close(() => resolve())); });
   const snapshot = (protocol: ExecutionSnapshot['protocol']): ExecutionSnapshot => ({ providerId: 'test-provider',
-    baseUrl: `http://127.0.0.1:${address.port}/v1`, encryptedApiKey: '', protocol, modelId: 'exact-model', maxTokens: 8192, reasoningEffort: 'max' });
+    baseUrl: `http://127.0.0.1:${address.port}/v1`, encryptedApiKey: '', protocol, modelId: 'exact-model',
+    simulateCodexClient: true, maxTokens: 8192, reasoningEffort: 'max' });
   const call = (protocol: ExecutionSnapshot['protocol'], stream?: boolean, signal = new AbortController().signal) =>
     callUpstream(snapshot(protocol), 'exact prompt', KEY, signal, stream === undefined ? undefined : { stream });
   return { requests, call };
@@ -51,6 +57,8 @@ test('Responses SSE drains split UTF-8/CRLF/multiline frames and prefers complet
   assert.equal(result.reasoning, 'final reasoning'); assert.equal(result.inputTokens, 12); assert.equal(result.outputTokens, 34);
   assert.ok(!JSON.stringify(result).includes(KEY)); assert.equal(f.requests.length, 1);
   assert.deepEqual(f.requests[0]!.body, { model: 'exact-model', stream: true, input: 'exact prompt', max_output_tokens: 8192, reasoning: { effort: 'max' } });
+  assert.equal(f.requests[0]!.codexVersion, '1.0.0');
+  assert.equal(f.requests[0]!.userAgent, 'Codex Desktop/0.155.0-alpha.2.6 (Windows 10.0.26200; x86_64) unknown (Codex Desktop; 26.911.61220)');
 });
 
 test('Chat SSE accumulates content/reasoning, accepts usage after finish and requires DONE', async t => {

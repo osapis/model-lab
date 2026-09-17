@@ -15,7 +15,8 @@ test('provider DTO exposes only configured public fields even when internal cred
   } satisfies StoredProvider & Record<string, unknown>;
   assert.deepEqual(providerDto(provider, decryptor), {
     id: provider.id, name: provider.name, baseUrl: provider.baseUrl, protocol: 'responses',
-    enabled: true, createdAt: provider.createdAt, retentionDays: null, hasApiKey: true, apiKeyPreview: 'test...12345',
+    simulateCodexClient: false, enabled: true, createdAt: provider.createdAt,
+    retentionDays: null, hasApiKey: true, apiKeyPreview: 'test...12345',
   });
   assert.equal(providerDto({ ...provider, encryptedApiKey: '', retentionDays: 7 }, decryptor).hasApiKey, false);
   assert.equal(providerDto({ ...provider, retentionDays: 7 }, decryptor).retentionDays, 7);

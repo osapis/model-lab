@@ -25,7 +25,8 @@ const baseUrl = z.string().min(1).max(2048).refine(value => {
 });
 const providerSchema = z.object({
   id, name: z.string().trim().min(1).max(100), baseUrl, protocol: z.enum(['chat-completions', 'responses']),
-  enabled: z.boolean(), retentionDays: retention.nullable(), apiKey: z.string().max(8192), createdAt: timestamp,
+  simulateCodexClient: z.boolean().default(false), enabled: z.boolean(), retentionDays: retention.nullable(),
+  apiKey: z.string().max(8192), createdAt: timestamp,
 }).strict();
 const modelSchema = z.object({
   id, providerId: id, name: z.string().trim().min(1).max(120), modelId: z.string().trim().min(1).max(200),
@@ -171,6 +172,7 @@ export function exportConfig(store: Store, artifacts: ArtifactRepository, passwo
       version: 1, createdAt: new Date().toISOString(),
       providers: store.all<StoredProvider>('providers').map(provider => ({
         id: provider.id, name: provider.name, baseUrl: provider.baseUrl, protocol: provider.protocol, enabled: provider.enabled,
+        simulateCodexClient: provider.simulateCodexClient ?? false,
         retentionDays: provider.retentionDays ?? null, apiKey: store.decrypt(provider.encryptedApiKey), createdAt: provider.createdAt,
       })),
       models: store.all<Model>('models').map(model => ({ id: model.id, providerId: model.providerId, name: model.name, modelId: model.modelId,

@@ -3,6 +3,7 @@ import { normalizeReasoningEffort } from '../shared/reasoning.ts';
 
 const MAX_RESPONSE_BYTES = 4 * 1024 * 1024;
 const MAX_CATALOG_BYTES = 2 * 1024 * 1024;
+const CODEX_DESKTOP_USER_AGENT = 'Codex Desktop/0.155.0-alpha.2.6 (Windows 10.0.26200; x86_64) unknown (Codex Desktop; 26.911.61220)';
 export class ModelDiscoveryError extends Error {
   constructor(public status: number, message: string) { super(message); }
 }
@@ -227,7 +228,14 @@ export async function callUpstream(snapshot: ExecutionSnapshot, prompt: string, 
   let response: Response;
   try {
     response = await (options.fetcher ?? fetch)(`${snapshot.baseUrl.replace(/\/+$/, '')}/${responses ? 'responses' : 'chat/completions'}`, {
-      method: 'POST', headers: { 'Content-Type': 'application/json', ...(apiKey ? { Authorization: `Bearer ${apiKey}` } : {}) },
+      method: 'POST', headers: {
+        'Content-Type': 'application/json',
+        ...(snapshot.simulateCodexClient ? {
+          'User-Agent': CODEX_DESKTOP_USER_AGENT,
+          'x-codex-v': '1.0.0',
+        } : {}),
+        ...(apiKey ? { Authorization: `Bearer ${apiKey}` } : {}),
+      },
       // Inspect redirects as a permanent HTTP failure without forwarding credentials.
       body: JSON.stringify(body), signal, redirect: 'manual',
     });

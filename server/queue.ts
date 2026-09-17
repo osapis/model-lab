@@ -50,7 +50,7 @@ export class RunQueue {
       requestTimeoutSeconds: this.configuredTimeoutSeconds(),
       parameters: { protocol: provider.protocol, maxTokens: model.maxTokens, reasoningEffort },
       execution: { providerId: provider.id, baseUrl: provider.baseUrl, encryptedApiKey: provider.encryptedApiKey,
-        protocol: provider.protocol, modelId: model.modelId,
+        protocol: provider.protocol, modelId: model.modelId, simulateCodexClient: provider.simulateCodexClient ?? false,
         maxTokens: model.maxTokens, reasoningEffort },
     };
   }
@@ -156,7 +156,8 @@ export class RunQueue {
     const timer = setTimeout(() => { timedOut = true; controller.abort(); }, timeoutSeconds * 1000);
     try {
       if (!run.execution) throw new UpstreamError('任务缺少 API 参数快照，请重新创建测试。', false, 'invalid-response');
-      const result = await callUpstream(run.execution, run.promptContent, this.store.decrypt(run.execution.encryptedApiKey), controller.signal, { fetcher: this.upstreamFetch });
+      const result = await callUpstream(run.execution, run.promptContent, this.store.decrypt(run.execution.encryptedApiKey), controller.signal,
+        { stream: run.execution.protocol === 'responses', fetcher: this.upstreamFetch });
       const responseLatencyMs = Math.round(performance.now() - start);
       let current = this.store.get<StoredRun>('runs', run.id);
       if (this.closed || current?.status !== 'running') return false;
