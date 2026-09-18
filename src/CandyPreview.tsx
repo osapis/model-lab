@@ -1,4 +1,5 @@
 import { useMemo, type CSSProperties } from 'react';
+import { Check, X } from 'lucide-react';
 import './candy-preview.css';
 
 type CandyKind = 'wrapped' | 'round' | 'star' | 'lollipop';
@@ -79,11 +80,13 @@ function CandyShape({ kind, color, detail }: { kind: CandyKind; color: string; d
 export default function CandyPreview({
   answer,
   seed,
+  state = 'success',
   unit,
   caption,
 }: {
   answer: string;
   seed: string;
+  state?: 'success' | 'error';
   unit?: string;
   caption?: string;
 }) {
@@ -118,12 +121,19 @@ export default function CandyPreview({
     '--candy-muted': scene.palette.muted,
     '--candy-soft': '#fffdf4',
     '--candy-accent': scene.palette.accent,
+    ...(state === 'error' ? {
+      '--candy-bg': '#fce9e6',
+      '--candy-bg-light': '#fff7f4',
+      '--candy-ink': '#9c403b',
+      '--candy-muted': '#b66e67',
+      '--candy-accent': '#d77870',
+    } : {}),
     '--candy-answer-scale': characters <= 3 ? 1 : characters <= 6 ? .82 : characters <= 10 ? .62 : .48,
   } as CSSProperties;
 
-  return <div className="candy-preview" style={variables} data-palette={scene.palette.name}>
+  return <div className="candy-preview" style={variables} data-palette={scene.palette.name} data-state={state}>
     <svg className="candy-preview-decor" viewBox="0 0 900 740" preserveAspectRatio="xMidYMid slice" aria-hidden="true" focusable="false">
-      <rect width="900" height="740" fill={scene.palette.background} />
+      <rect width="900" height="740" fill={state === 'error' ? '#fce9e6' : scene.palette.background} />
       <path d="M0 0H900V133C704 56 667 197 495 139S196 222 0 106Z" fill={scene.palette.light} opacity=".9" />
       <path d="M0 556C160 482 255 624 432 578S718 525 900 613V740H0Z" fill={scene.palette.light} opacity=".95" />
       <circle cx="13" cy="220" r="161" fill={scene.palette.colors[0]} opacity=".12" />
@@ -133,6 +143,7 @@ export default function CandyPreview({
       {scene.confetti.map((piece, index) => <g key={index} transform={`translate(${piece.x.toFixed(2)} ${piece.y.toFixed(2)}) rotate(${piece.rotation.toFixed(2)})`} fill={piece.color} opacity=".66">{index % 3 === 0 ? <path d="M0-7 2-2 7 0 2 2 0 7-2 2-7 0-2-2Z" /> : index % 3 === 1 ? <rect x="-2" y="-6" width="4" height="12" rx="2" /> : <circle r={piece.size} />}</g>)}
       {scene.candies.map((candy, index) => <g key={index} transform={`translate(${candy.x.toFixed(2)} ${candy.y.toFixed(2)}) rotate(${candy.rotation.toFixed(2)}) scale(${candy.scale.toFixed(3)})`}><CandyShape kind={candy.kind} color={candy.color} detail={candy.detail} /></g>)}
     </svg>
+    <span className="candy-preview-state" aria-label={state === 'success' ? '答案正确' : '答案错误'}>{state === 'success' ? <Check size={15} strokeWidth={2.5} /> : <X size={15} strokeWidth={2.5} />}</span>
     <div className="candy-preview-content">
       <span className="candy-preview-label">模型的回答</span>
       <div className="candy-preview-answer" tabIndex={characters > 3 ? 0 : undefined} aria-label={`模型回答 ${answer}`}>{answer}</div>
