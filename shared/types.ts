@@ -49,10 +49,12 @@ export interface PublicData {
 }
 export interface Schedule {
   id: string; name: string; promptIds: string[]; modelIds: string[];
+  promptModelPairs?: SchedulePair[];
   intervalMinutes: number; enabled: boolean;
   scheduleType?: 'interval' | 'cron'; cronExpression?: string; timezone?: string;
   lastRunAt: string | null; nextRunAt: string; lastError: string; createdAt: string;
 }
+export interface SchedulePair { promptId: string; modelId: string }
 export interface LabSettings { retentionDays: number; maxRetries?: number; requestTimeoutSeconds?: number }
 export interface StorageSettings {
   mode: 'memory' | 'disk' | 's3' | 'cloudflare'; endpoint: string; region: string; bucket: string; prefix: string;

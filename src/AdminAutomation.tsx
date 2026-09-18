@@ -3,7 +3,7 @@ import {
   Activity, Archive, CalendarClock, Check, Clock3, Cloud, Database, FileText, HardDrive,
   Info, Layers3, LoaderCircle, Pencil, Play, Plus, RefreshCw, ShieldCheck, Trash2, X,
 } from 'lucide-react';
-import type { AdminData, Schedule, StorageSettings } from '../shared/types';
+import type { AdminData, Schedule, SchedulePair, StorageSettings } from '../shared/types';
 import { DEFAULT_AUTO_RETRIES, MAX_AUTO_RETRIES, normalizeMaxRetries } from '../shared/retries';
 import { DEFAULT_REQUEST_TIMEOUT_SECONDS, MIN_REQUEST_TIMEOUT_SECONDS, MAX_REQUEST_TIMEOUT_SECONDS, normalizeRequestTimeoutSeconds } from '../shared/timeouts';
 import { DEFAULT_SCHEDULE_TIMEZONE, EXAMPLE_SCHEDULE_CRON, type CronPreview } from '../shared/schedules';
@@ -43,7 +43,11 @@ function cronDescription(expression: string) {
 function Spinner() { return <LoaderCircle size={15} className="admin-spin" aria-hidden="true" />; }
 const schedulePayload = (schedule: Schedule) => ({ name: schedule.name, promptIds: schedule.promptIds,
   modelIds: schedule.modelIds, intervalMinutes: schedule.intervalMinutes, enabled: schedule.enabled,
+  ...(schedule.promptModelPairs ? { promptModelPairs: schedule.promptModelPairs } : {}),
   scheduleType: schedule.scheduleType ?? 'interval', cronExpression: schedule.cronExpression ?? '', timezone: schedule.timezone || DEFAULT_SCHEDULE_TIMEZONE });
+const pairKey = (pair: SchedulePair) => `${pair.promptId}\u0000${pair.modelId}`;
+const pairsForSchedule = (schedule: Schedule): SchedulePair[] => schedule.promptModelPairs
+  ?? schedule.promptIds.flatMap(promptId => schedule.modelIds.map(modelId => ({ promptId, modelId })));
 
 export function Schedules({ data, busy, mutate }: PanelProps) {
   const [editing, setEditing] = useState<Schedule | 'new' | null>(null);
@@ -70,6 +74,12 @@ export function Schedules({ data, busy, mutate }: PanelProps) {
         const selection = resolveScheduleSelection(schedule, data.prompts, data.models, data.providers);
         const sourcesAvailable = selection.runnableCount > 0;
         const skipped = [selection.skippedPromptCount ? `${selection.skippedPromptCount} 个提示词` : '', selection.skippedModelCount ? `${selection.skippedModelCount} 个模型` : ''].filter(Boolean).join('、');
+        const pairLabels = schedule.promptModelPairs?.map(pair => {
+          const prompt = data.prompts.find(item => item.id === pair.promptId)?.title || '已删除的提示词';
+          const model = data.models.find(item => item.id === pair.modelId);
+          const modelName = model ? `${data.providers.find(item => item.id === model.providerId)?.name || '已删除的接口'} · ${model.name}` : '已删除的模型';
+          return `${prompt} → ${modelName}`;
+        });
         return <article className="admin-schedule-card" key={schedule.id}>
           <div className="admin-schedule-card-heading"><div className="admin-row-title"><h3>{schedule.name}</h3><span className={`admin-small-badge ${schedule.enabled ? 'enabled' : ''}`}>{schedule.enabled ? '已启用' : '已暂停'}</span>
             {activeCount > 0 && <span className="admin-status admin-status-running"><Clock3 size={11} />{activeCount} 项运行中</span>}</div>
@@ -86,8 +96,8 @@ export function Schedules({ data, busy, mutate }: PanelProps) {
           </div>
           <div className="admin-schedule-facts"><span><Clock3 size={13} />{isCron ? 'Cron 定时' : `每 ${intervalLabel(schedule.intervalMinutes)}`}</span><span><Layers3 size={13} />每轮 {selection.runnableCount} 项测试</span><span><Activity size={13} />全部测试自动展示</span></div>
           {isCron && <div className="admin-schedule-cron-rule"><code>{schedule.cronExpression}</code><span>{timezoneLabel(scheduleTimezone)}</span><p>{cronDescription(schedule.cronExpression || '')}</p></div>}
-          <div className="admin-schedule-selection"><div><FileText size={13} /><span>{schedule.promptIds.map((id) => { const prompt = data.prompts.find(item => item.id === id); return prompt ? `${prompt.title}${prompt.enabled ? '' : '（本轮跳过）'}` : '已删除的提示词（本轮跳过）'; }).join('、')}</span></div>
-            <div><Layers3 size={13} /><span>{schedule.modelIds.map((id) => { const model = data.models.find((item) => item.id === id); return model ? `${data.providers.find((provider) => provider.id === model.providerId)?.name || '已删除的接口'} · ${model.name}${selection.models.some(item => item.id === id) ? '' : '（本轮跳过）'}` : '已删除的模型（本轮跳过）'; }).join('、')}</span></div></div>
+          <div className="admin-schedule-selection">{pairLabels ? <div className="admin-schedule-selection-pairs"><Layers3 size={13} /><span>{pairLabels.join('、')}</span></div> : <><div><FileText size={13} /><span>{schedule.promptIds.map((id) => { const prompt = data.prompts.find(item => item.id === id); return prompt ? `${prompt.title}${prompt.enabled ? '' : '（本轮跳过）'}` : '已删除的提示词（本轮跳过）'; }).join('、')}</span></div>
+            <div><Layers3 size={13} /><span>{schedule.modelIds.map((id) => { const model = data.models.find((item) => item.id === id); return model ? `${data.providers.find((provider) => provider.id === model.providerId)?.name || '已删除的接口'} · ${model.name}${selection.models.some(item => item.id === id) ? '' : '（本轮跳过）'}` : '已删除的模型（本轮跳过）'; }).join('、')}</span></div></>}</div>
           <div className="admin-schedule-times"><span>下次执行<strong>{schedule.enabled ? dateLabel(schedule.nextRunAt, scheduleTimezone) : '已暂停'}</strong></span><span>上次执行<strong>{dateLabel(schedule.lastRunAt, scheduleTimezone)}</strong></span><span>以上时间：{timezoneLabel(scheduleTimezone)}</span></div>
           {skipped && <p className="admin-automation-warning"><Info size={13} />{sourcesAvailable ? `当前跳过 ${skipped}，其余 ${selection.runnableCount} 项测试照常执行。停用项重新启用后自动参与后续轮次。` : '当前没有可执行的提示词和模型组合，本轮暂不调用；启用所选项后将按原计划继续，也可编辑计划调整选择。'}</p>}
           {schedule.lastError && <p className="admin-automation-warning" role="status"><Info size={13} />上次执行：{schedule.lastError}</p>}
@@ -109,8 +119,7 @@ function ScheduleEditor({ data, schedule, busy, mutate, onClose }: PanelProps & 
   const prompts = data.prompts;
   const models = data.models;
   const [name, setName] = useState(schedule?.name || '');
-  const [promptIds, setPromptIds] = useState(schedule?.promptIds || []);
-  const [modelIds, setModelIds] = useState(schedule?.modelIds || []);
+  const [promptModelPairs, setPromptModelPairs] = useState<SchedulePair[]>(() => schedule ? pairsForSchedule(schedule) : []);
   const [intervalMinutes, setIntervalMinutes] = useState(String(schedule?.intervalMinutes ?? 60));
   const [customInterval, setCustomInterval] = useState(!intervals.includes(schedule?.intervalMinutes ?? 60));
   const [scheduleType, setScheduleType] = useState<'interval' | 'cron'>(schedule?.scheduleType === 'cron' ? 'cron' : 'interval');
@@ -121,11 +130,11 @@ function ScheduleEditor({ data, schedule, busy, mutate, onClose }: PanelProps & 
   const [previewRefresh, setPreviewRefresh] = useState(0);
   const previewVersion = useRef(0);
   const [enabled, setEnabled] = useState(schedule?.enabled ?? true);
-  const selection = resolveScheduleSelection({ promptIds, modelIds }, prompts, models, data.providers);
+  const selectedPromptIds = [...new Set(promptModelPairs.map(pair => pair.promptId))];
+  const selectedModelIds = [...new Set(promptModelPairs.map(pair => pair.modelId))];
+  const selection = resolveScheduleSelection({ promptIds: selectedPromptIds, modelIds: selectedModelIds, promptModelPairs }, prompts, models, data.providers);
   const count = selection.runnableCount;
-  const configuredCount = selection.selectedPromptCount * selection.selectedModelCount;
-  const missingPromptIds = [...new Set(promptIds)].filter(id => !prompts.some(prompt => prompt.id === id));
-  const missingModelIds = [...new Set(modelIds)].filter(id => !models.some(model => model.id === id));
+  const configuredCount = promptModelPairs.length;
   const hasSkipped = selection.skippedPromptCount > 0 || selection.skippedModelCount > 0;
   const interval = Number(intervalMinutes);
   const validInterval = Number.isInteger(interval) && interval >= 1 && interval <= 43200;
@@ -134,7 +143,13 @@ function ScheduleEditor({ data, schedule, busy, mutate, onClose }: PanelProps & 
   const previewLoading = scheduleType === 'cron' && !!cronExpression.trim() && !!timezone.trim() && (!previewCurrent || cronPreview.loading);
   const validCron = previewCurrent && !cronPreview.loading && !cronPreview.error && cronPreview.nextRuns.length === 3;
   const valid = !!name.trim() && configuredCount > 0 && configuredCount <= 50 && (scheduleType === 'cron' ? validCron : validInterval);
-  const toggle = (id: string, ids: string[]) => ids.includes(id) ? ids.filter((current) => current !== id) : [...ids, id];
+  const selectedPairKeys = new Set(promptModelPairs.map(pairKey));
+  const togglePair = (promptId: string, modelId: string) => {
+    const key = pairKey({ promptId, modelId });
+    setPromptModelPairs(current => selectedPairKeys.has(key)
+      ? current.filter(pair => pairKey(pair) !== key)
+      : [...current, { promptId, modelId }]);
+  };
 
   useEffect(() => {
     const version = ++previewVersion.current;
@@ -162,8 +177,10 @@ function ScheduleEditor({ data, schedule, busy, mutate, onClose }: PanelProps & 
   async function save(event: FormEvent) {
     event.preventDefault();
     if (!valid) return;
+    const promptIds = [...new Set(promptModelPairs.map(pair => pair.promptId))];
+    const modelIds = [...new Set(promptModelPairs.map(pair => pair.modelId))];
     if (await mutate('schedule-save', schedule ? `/api/admin/schedules/${schedule.id}` : '/api/admin/schedules', json(schedule ? 'PUT' : 'POST', {
-      name: name.trim(), promptIds: [...new Set(promptIds)], modelIds: [...new Set(modelIds)],
+      name: name.trim(), promptIds, modelIds, promptModelPairs,
       intervalMinutes: validInterval ? interval : 60, enabled, scheduleType,
       cronExpression: scheduleType === 'cron' ? cronExpression.trim() : '',
       timezone: scheduleType === 'cron' ? timezone.trim() : schedule?.timezone || DEFAULT_SCHEDULE_TIMEZONE,
@@ -186,16 +203,23 @@ function ScheduleEditor({ data, schedule, busy, mutate, onClose }: PanelProps & 
             {previewLoading ? <p className="admin-cron-preview-status"><Spinner />正在校验规则并计算时间…</p> : previewCurrent && cronPreview.error ? <p className="admin-cron-error" role="alert">{cronPreview.error}</p> : validCron ? <><p className="admin-cron-description">{cronDescription(cronExpression)}</p><p className="admin-cron-zone">以下时间均为：{timezoneLabel(timezone.trim())}</p><ol>{cronPreview.nextRuns.map((nextRun) => <li key={nextRun}><time dateTime={nextRun}>{dateLabel(nextRun, timezone.trim())}</time></li>)}</ol><p className="admin-cron-zone">以上为计划时间，实际开始可能稍晚；每轮测试按所选提示词和模型组合执行。</p></> : <p className="admin-cron-preview-status">填写表达式和时区后自动校验，不会创建或执行测试。</p>}
           </div>
         </div>}
-        <fieldset className="admin-schedule-options"><legend>测试提示词 <span>已选 {selection.selectedPromptCount} 项 · 当前 {selection.prompts.length} 项可执行</span></legend><div className="admin-schedule-option-list">
-          {prompts.map((prompt) => <label key={prompt.id}><input type="checkbox" checked={promptIds.includes(prompt.id)} onChange={() => setPromptIds(toggle(prompt.id, promptIds))} /><span>{prompt.title}{!prompt.enabled && <small className="admin-choice-paused">已停用 · 执行时跳过，保留勾选</small>}</span></label>)}
-          {missingPromptIds.map(id => <label key={id}><input type="checkbox" checked onChange={() => setPromptIds(toggle(id, promptIds))} /><span>已删除的提示词<small>不会执行，可取消勾选移出计划。</small></span></label>)}
-          {!prompts.length && !missingPromptIds.length && <p className="admin-muted">暂无提示词，请先在提示词管理中添加。</p>}
-        </div></fieldset>
-        <fieldset className="admin-schedule-options"><legend>参测模型 <span>已选 {selection.selectedModelCount} 项 · 当前 {selection.models.length} 项可执行</span></legend><div className="admin-schedule-option-list">
-          {models.map((model) => <label key={model.id}><input type="checkbox" checked={modelIds.includes(model.id)} onChange={() => setModelIds(toggle(model.id, modelIds))} /><span><strong className="admin-choice-provider">{data.providers.find((provider) => provider.id === model.providerId)?.name}</strong><small>{model.name} · {model.modelId}</small>{!selection.models.some(item => item.id === model.id) && (!model.enabled || !data.providers.some(provider => provider.id === model.providerId && provider.enabled)) && <small className="admin-choice-paused">{!model.enabled ? '模型已停用' : 'API 已停用或删除'} · 执行时跳过，保留勾选</small>}</span></label>)}
-          {missingModelIds.map(id => <label key={id}><input type="checkbox" checked onChange={() => setModelIds(toggle(id, modelIds))} /><span>已删除的模型<small>不会执行，可取消勾选移出计划。</small></span></label>)}
-          {!models.length && !missingModelIds.length && <p className="admin-muted">暂无模型，请先在接口与模型中添加。</p>}
-        </div></fieldset>
+        <fieldset className="admin-schedule-options admin-schedule-pairs"><legend>提示词与模型组合 <span>已选 {configuredCount} 组 · 本轮执行 {count} 项</span></legend>
+          <p className="admin-schedule-pair-help">每个勾选项代表一组提示词与模型；同一计划内的所有组合会在同一轮执行。</p>
+          {!prompts.length || !models.length ? <p className="admin-muted">请先添加提示词和模型。</p> : <div className="admin-schedule-pair-list">
+            {prompts.map(prompt => <div className="admin-schedule-pair-row" key={prompt.id}>
+              <div className="admin-schedule-pair-prompt"><strong>{prompt.title}</strong>{!prompt.enabled && <small className="admin-choice-paused">已停用 · 本轮跳过</small>}</div>
+              <div className="admin-schedule-pair-models">{models.map(model => {
+                const provider = data.providers.find(item => item.id === model.providerId);
+                const available = model.enabled && !!provider?.enabled;
+                const selected = selectedPairKeys.has(pairKey({ promptId: prompt.id, modelId: model.id }));
+                return <label key={model.id} className={selected ? 'selected' : ''}>
+                  <input type="checkbox" checked={selected} onChange={() => togglePair(prompt.id, model.id)} />
+                  <span><strong>{provider?.name || '已删除的接口'}</strong><small>{model.name} · {model.modelId}</small>{!available && <small className="admin-choice-paused">{!model.enabled ? '模型已停用' : 'API 已停用'} · 保留勾选</small>}</span>
+                </label>;
+              })}</div>
+            </div>)}
+          </div>}
+        </fieldset>
       </div>
       {hasSkipped && <p className="admin-automation-warning"><Info size={13} />{count ? `当前可执行 ${count} 项测试，停用或删除的选项会跳过，勾选状态仍会保存。` : '当前没有可执行的组合，可以保存计划等待所选项恢复。'}停用项重新启用后自动参与；取消勾选才会将其移出计划。</p>}
       <div className="admin-schedule-switches"><label className="admin-checkbox-label"><input type="checkbox" checked={enabled} onChange={(event) => setEnabled(event.target.checked)} />启用定时执行</label>

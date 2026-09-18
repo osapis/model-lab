@@ -3,7 +3,7 @@ import type { Model, Prompt, Schedule } from '../shared/types.ts';
 import { Store, type StoredProvider, type StoredRun } from './store.ts';
 import { RunQueue } from './queue.ts';
 import { nextScheduleRunAt, normalizeScheduleTiming, ScheduleTimingError } from './schedule-time.ts';
-import { resolveScheduleSelection } from '../shared/schedule-availability.ts';
+import { resolveScheduleSelection, uniqueSchedulePairs } from '../shared/schedule-availability.ts';
 
 export class SchedulerError extends Error {
   constructor(public status: number, message: string) { super(message); }
@@ -29,12 +29,15 @@ export class Scheduler {
     this.cleanupTimer = setInterval(() => { void this.cleanup(); }, this.options.cleanupIntervalMs ?? 60_000);
     this.tickTimer.unref(); this.cleanupTimer.unref();
   }
-  validate(promptIds: string[], modelIds: string[], previous?: Pick<Schedule, 'promptIds' | 'modelIds'>) {
+  validate(promptIds: string[], modelIds: string[], previous?: Pick<Schedule, 'promptIds' | 'modelIds' | 'promptModelPairs'>,
+    promptModelPairs?: Schedule['promptModelPairs']) {
     const selectedPromptIds = [...new Set(promptIds)];
     const selectedModelIds = [...new Set(modelIds)];
+    const selectedPairs = promptModelPairs === undefined ? undefined : uniqueSchedulePairs(promptModelPairs);
     const prompts = selectedPromptIds.map(id => this.store.get<Prompt>('prompts', id));
     const models = selectedModelIds.map(id => this.store.get<Model>('models', id));
-    if (prompts.length * models.length > 50) throw new SchedulerError(400, '每次计划最多创建 50 个测试任务。');
+    if (selectedPairs !== undefined && !selectedPairs.length) throw new SchedulerError(400, '计划至少需要选择一个提示词和模型组合。');
+    if ((selectedPairs?.length ?? prompts.length * models.length) > 50) throw new SchedulerError(400, '每次计划最多创建 50 个测试任务。');
     // Existing deleted references may be retained while pausing or editing a plan.
     // New selections must still refer to real configuration records.
     if (!prompts.length || prompts.some((prompt, index) => !prompt && !previous?.promptIds.includes(selectedPromptIds[index]!))) {
@@ -42,6 +45,9 @@ export class Scheduler {
     }
     if (!models.length || models.some((model, index) => !model && !previous?.modelIds.includes(selectedModelIds[index]!))) {
       throw new SchedulerError(400, '计划中的模型不存在。');
+    }
+    if (selectedPairs?.some(pair => !selectedPromptIds.includes(pair.promptId) || !selectedModelIds.includes(pair.modelId))) {
+      throw new SchedulerError(400, '计划中的提示词和模型组合无效。');
     }
     return { prompts: prompts.filter((prompt): prompt is Prompt => Boolean(prompt)), models: models.filter((model): model is Model => Boolean(model)) };
   }
@@ -56,9 +62,7 @@ export class Scheduler {
     if (runnableCount > 50) throw new SchedulerError(400, '每次计划最多创建 50 个测试任务。');
     if (this.queue.size() + runnableCount > 200) throw new SchedulerError(429, '队列已满，本次计划执行已跳过。');
     const batchId = randomUUID(); const runs: StoredRun[] = [];
-    for (const { model, provider } of pairs) {
-      for (const prompt of prompts) runs.push({ ...this.queue.create(prompt, model, provider, batchId), scheduleId: schedule.id });
-    }
+    for (const { prompt, model, provider } of pairs) runs.push({ ...this.queue.create(prompt, model, provider, batchId), scheduleId: schedule.id });
     this.queue.enqueue(runs);
     const current = this.store.get<Schedule>('schedules', schedule.id) || schedule;
     this.store.put('schedules', { ...current, lastRunAt: new Date(this.now()).toISOString(), lastError: '',

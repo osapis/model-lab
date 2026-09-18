@@ -21,6 +21,7 @@ import { MIN_REQUEST_TIMEOUT_SECONDS, MAX_REQUEST_TIMEOUT_SECONDS } from '../sha
 import { ReasoningHistoryService } from './reasoning-history.ts';
 import { publicResultRuns } from './public-results.ts';
 import { nextScheduleRunAt, normalizeScheduleTiming, previewCron, ScheduleTimingError } from './schedule-time.ts';
+import { uniqueSchedulePairs } from '../shared/schedule-availability.ts';
 
 const hash = (value: string) => createHash('sha256').update(value).digest('hex');
 const COOKIE_NAME = 'model_lab_session';
@@ -51,6 +52,7 @@ const scheduleInput = z.object({
   name: z.string().trim().min(1).max(120),
   promptIds: z.array(z.string().min(1).max(100)).min(1).max(50),
   modelIds: z.array(z.string().min(1).max(100)).min(1).max(50),
+  promptModelPairs: z.array(z.object({ promptId: z.string().min(1).max(100), modelId: z.string().min(1).max(100) }).strict()).max(50).optional(),
   intervalMinutes: z.number().int().min(1).max(43200).optional(),
   scheduleType: z.enum(['interval', 'cron']).optional(), cronExpression: z.string().trim().max(200).optional(), timezone: z.string().trim().max(100).optional(),
   enabled: z.boolean().default(true),
@@ -424,9 +426,13 @@ export function createApp(options: AppOptions = {}) {
     response.json({ settings: store.saveSettings({ ...store.settings(), ...patch }) });
   });
   app.post('/api/admin/schedules', (request, response) => {
-    const input = scheduleInput.parse(request.body); scheduler.validate(input.promptIds, input.modelIds);
+    const input = scheduleInput.parse(request.body);
+    const promptModelPairs = input.promptModelPairs === undefined ? undefined : uniqueSchedulePairs(input.promptModelPairs);
+    const promptIds = promptModelPairs ? [...new Set(promptModelPairs.map(pair => pair.promptId))] : [...new Set(input.promptIds)];
+    const modelIds = promptModelPairs ? [...new Set(promptModelPairs.map(pair => pair.modelId))] : [...new Set(input.modelIds)];
+    scheduler.validate(promptIds, modelIds, undefined, promptModelPairs);
     const timing = normalizeScheduleTiming(input, clock());
-    const schedule: Schedule = { ...input, ...timing, promptIds: [...new Set(input.promptIds)], modelIds: [...new Set(input.modelIds)],
+    const schedule: Schedule = { ...input, ...timing, promptIds, modelIds, ...(promptModelPairs ? { promptModelPairs } : {}),
       id: randomUUID(), createdAt: now(), lastRunAt: null, lastError: '', nextRunAt: nextScheduleRunAt(timing, clock()) };
     store.put('schedules', schedule); response.status(201).json({ schedule });
   });
@@ -436,12 +442,16 @@ export function createApp(options: AppOptions = {}) {
   });
   app.put('/api/admin/schedules/:id', (request, response) => {
     const previous = requireSchedule(request.params.id as string); const input = scheduleInput.parse(request.body);
-    scheduler.validate(input.promptIds, input.modelIds, previous);
+    const promptModelPairs = input.promptModelPairs === undefined ? previous.promptModelPairs : uniqueSchedulePairs(input.promptModelPairs);
+    const promptIds = promptModelPairs ? [...new Set(promptModelPairs.map(pair => pair.promptId))] : [...new Set(input.promptIds)];
+    const modelIds = promptModelPairs ? [...new Set(promptModelPairs.map(pair => pair.modelId))] : [...new Set(input.modelIds)];
+    scheduler.validate(promptIds, modelIds, previous, promptModelPairs);
     const timing = normalizeScheduleTiming({ ...previous, ...input }, clock());
     let oldTiming: ReturnType<typeof normalizeScheduleTiming> | undefined;
     try { oldTiming = normalizeScheduleTiming(previous, clock()); } catch { /* A valid edit can repair an invalid persisted plan. */ }
     const reset = !oldTiming || input.enabled !== previous.enabled || (Object.keys(timing) as (keyof typeof timing)[]).some(key => timing[key] !== oldTiming?.[key]);
-    const schedule: Schedule = { ...previous, ...input, ...timing, promptIds: [...new Set(input.promptIds)], modelIds: [...new Set(input.modelIds)],
+    const schedule: Schedule = { ...previous, ...input, ...timing, promptIds, modelIds,
+      ...(promptModelPairs ? { promptModelPairs } : { promptModelPairs: undefined }),
       nextRunAt: reset ? nextScheduleRunAt(timing, clock()) : previous.nextRunAt, lastError: '' };
     store.put('schedules', schedule); response.json({ schedule });
   });

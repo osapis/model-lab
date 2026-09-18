@@ -41,6 +41,7 @@ const promptSchema = z.object({
 }).strict();
 const scheduleSchema = z.object({
   id, name: z.string().trim().min(1).max(120), promptIds: z.array(id).min(1).max(50), modelIds: z.array(id).min(1).max(50),
+  promptModelPairs: z.array(z.object({ promptId: id, modelId: id }).strict()).max(50).optional(),
   intervalMinutes: z.number().int().min(1).max(43200).optional(), enabled: z.boolean(), createdAt: timestamp,
   scheduleType: z.enum(['interval', 'cron']).default('interval'),
   cronExpression: z.string().trim().max(200).default(''), timezone: z.string().trim().max(100).default('Asia/Shanghai'),
@@ -114,8 +115,11 @@ function validatePayload(input: unknown): ConfigPayload {
   ids(schedules);
   if (payload.models.some(model => !providers.has(model.providerId))) throw invalidBackup();
   for (const schedule of schedules) {
+    const pairKeys = schedule.promptModelPairs?.map(pair => `${pair.promptId}\u0000${pair.modelId}`) || [];
     if (new Set(schedule.modelIds).size !== schedule.modelIds.length || new Set(schedule.promptIds).size !== schedule.promptIds.length
-      || schedule.modelIds.length * schedule.promptIds.length > 50
+      || new Set(pairKeys).size !== pairKeys.length || (schedule.promptModelPairs ? schedule.promptModelPairs.length < 1 : false)
+      || (schedule.promptModelPairs ? schedule.promptModelPairs.length : schedule.modelIds.length * schedule.promptIds.length) > 50
+      || schedule.promptModelPairs?.some(pair => !prompts.has(pair.promptId) || !models.has(pair.modelId))
       || schedule.modelIds.some(modelId => !models.has(modelId)) || schedule.promptIds.some(promptId => !prompts.has(promptId))) throw invalidBackup();
   }
   return { ...payload, storage, schedules };
@@ -183,7 +187,7 @@ export function exportConfig(store: Store, artifacts: ArtifactRepository, passwo
         standardAnswer: prompt.standardAnswer ?? '',
         tags: prompt.tags, enabled: prompt.enabled, createdAt: prompt.createdAt, updatedAt: prompt.updatedAt })),
       schedules: store.all<Schedule>('schedules').map(schedule => ({ id: schedule.id, name: schedule.name, promptIds: schedule.promptIds,
-        modelIds: schedule.modelIds, intervalMinutes: schedule.intervalMinutes, enabled: schedule.enabled, createdAt: schedule.createdAt,
+        modelIds: schedule.modelIds, ...(schedule.promptModelPairs ? { promptModelPairs: schedule.promptModelPairs } : {}), intervalMinutes: schedule.intervalMinutes, enabled: schedule.enabled, createdAt: schedule.createdAt,
         scheduleType: schedule.scheduleType ?? 'interval', cronExpression: schedule.cronExpression ?? '', timezone: schedule.timezone ?? 'Asia/Shanghai' })),
       settings: { retentionDays: settings.retentionDays, maxRetries: settings.maxRetries,
         requestTimeoutSeconds: settings.requestTimeoutSeconds }, storage: artifacts.exportConfiguration(),
@@ -226,6 +230,7 @@ export function importConfig(store: Store, artifacts: ArtifactRepository, passwo
     const now = Date.now();
     const schedules: Schedule[] = payload.schedules.map(schedule => ({ ...schedule, id: randomUUID(),
       promptIds: schedule.promptIds.map(id => promptIds.get(id)!), modelIds: schedule.modelIds.map(id => modelIds.get(id)!),
+      ...(schedule.promptModelPairs ? { promptModelPairs: schedule.promptModelPairs.map(pair => ({ promptId: promptIds.get(pair.promptId)!, modelId: modelIds.get(pair.modelId)! })) } : {}),
       enabled: false, lastRunAt: null, lastError: '', nextRunAt: nextScheduleRunAt(schedule, now) }));
     store.transaction(() => {
       for (const provider of providers) store.put('providers', provider);

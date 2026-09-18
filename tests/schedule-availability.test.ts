@@ -106,6 +106,27 @@ for (const deployment of ['node', 'cloudflare'] as const) {
     assert.equal(new Set(f.runs().map(run => run.batchId)).size, 3);
     assert.deepEqual(f.current().modelIds, f.schedule.modelIds);
   });
+
+  test(`${deployment}: explicit prompt-model pairs stay in one round without cross-product tasks`, async t => {
+    const f = await fixture(t, deployment);
+    const paired = { ...f.schedule,
+      promptIds: f.prompts.map(prompt => prompt.id), modelIds: f.models.slice(0, 2).map(model => model.id),
+      promptModelPairs: [
+        { promptId: f.prompts[0]!.id, modelId: f.models[0]!.id },
+        { promptId: f.prompts[1]!.id, modelId: f.models[1]!.id },
+      ] };
+    f.store.put('schedules', paired);
+    const selection = resolveScheduleSelection(paired, f.prompts, f.models, f.providers);
+    assert.equal(selection.runnableCount, 2);
+    const runs = f.scheduler.run(paired);
+    assert.equal(runs.length, 2);
+    assert.equal(new Set(runs.map(run => run.batchId)).size, 1);
+    assert.deepEqual(runs.map(run => [run.promptId, run.modelId]).sort(), [
+      [f.prompts[0]!.id, f.models[0]!.id], [f.prompts[1]!.id, f.models[1]!.id],
+    ].sort());
+    await f.drain();
+    assert.equal(f.requests.length, 2);
+  });
 }
 
 test('manual scheduled launches skip disabled API/prompt and missing references before creating any calls', async t => {
