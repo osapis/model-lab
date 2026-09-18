@@ -336,14 +336,15 @@ function ResultCard({ run: metadata, selected, onOpen, onCompare, onResultChange
     }
   }, [run.id, run.status, run.finishedAt, metadata.status, metadata.finishedAt, onResultChanged]);
   if (superseded) return null;
-  const builtinCandy = run.category === 'reasoning' && /糖果/.test(run.promptContent);
+  const candyQuestion = /糖果/.test(run.promptContent);
+  const builtinCandy = run.category === 'reasoning' && candyQuestion;
   const expectedAnswer = run.standardAnswer?.trim() || (builtinCandy ? '21' : undefined);
   const extracted = expectedAnswer && run.output ? extractNumericAnswer(run.output, expectedAnswer) : undefined;
-  const candyAnswer = builtinCandy ? extracted?.answer : undefined;
+  const isCorrect = run.category === 'reasoning' && extracted?.verdict === 'correct' && !!extracted.answer;
   const gradedVerdict = (extracted?.verdict === 'correct' || extracted?.verdict === 'incorrect') ? extracted.verdict : undefined;
   return <article ref={ref} className={`result-card ${selected ? 'is-selected' : ''}`}>
     <div className={`result-art ${run.category}`}>
-      {run.status !== 'completed' ? <RunState run={run} loadError={error} /> : loading || (!hydrated && !error) ? <Loading label="正在加载作品…" /> : error || run.artifactAvailable === false ? <div className="artifact-missing"><Clock3 size={27} /><strong>{error ? '作品暂时无法加载' : run.artifactStorage === 'cloudflare' ? '云端作品暂不可用' : run.artifactStorage === 'disk' ? '本地作品暂不可用' : '作品缓存已失效'}</strong><span>{error || '测试记录与请求参数仍然保留'}</span></div> : run.html ? <Preview html={run.html} title={run.promptTitle} compact /> : builtinCandy && candyAnswer ? <CandyPreview answer={candyAnswer} seed={run.id} /> : <div className="text-art"><Markdown content={run.output} /></div>}
+      {run.status !== 'completed' ? <RunState run={run} loadError={error} /> : loading || (!hydrated && !error) ? <Loading label="正在加载作品…" /> : error || run.artifactAvailable === false ? <div className="artifact-missing"><Clock3 size={27} /><strong>{error ? '作品暂时无法加载' : run.artifactStorage === 'cloudflare' ? '云端作品暂不可用' : run.artifactStorage === 'disk' ? '本地作品暂不可用' : '作品缓存已失效'}</strong><span>{error || '测试记录与请求参数仍然保留'}</span></div> : isCorrect ? <CandyPreview answer={extracted.answer} seed={run.id} unit={candyQuestion ? '颗糖果' : undefined} caption={candyQuestion ? '不同形状 · 苹果与桃子' : '逻辑推理 · 命中标准答案'} /> : run.html ? <Preview html={run.html} title={run.promptTitle} compact /> : <div className="text-art"><Markdown content={run.output} /></div>}
       <span className={`art-category ${run.category}`}><span />{categories[run.category]}</span>
     </div>
     <div className="result-card-body">

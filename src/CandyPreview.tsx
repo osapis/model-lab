@@ -76,7 +76,17 @@ function CandyShape({ kind, color, detail }: { kind: CandyKind; color: string; d
   </>;
 }
 
-export default function CandyPreview({ answer, seed }: { answer: string; seed: string }) {
+export default function CandyPreview({
+  answer,
+  seed,
+  unit,
+  caption,
+}: {
+  answer: string;
+  seed: string;
+  unit?: string;
+  caption?: string;
+}) {
   const scene = useMemo(() => {
     const hash = seedHash(seed);
     const random = randomFrom(hash);
@@ -126,8 +136,8 @@ export default function CandyPreview({ answer, seed }: { answer: string; seed: s
     <div className="candy-preview-content">
       <span className="candy-preview-label">模型的回答</span>
       <div className="candy-preview-answer" tabIndex={characters > 3 ? 0 : undefined} aria-label={`模型回答 ${answer}`}>{answer}</div>
-      <span className="candy-preview-unit">颗糖果</span>
-      <p className="candy-preview-caption">不同形状 · 苹果与桃子</p>
+      {unit && <span className="candy-preview-unit">{unit}</span>}
+      {caption && <p className="candy-preview-caption">{caption}</p>}
     </div>
   </div>;
 }
