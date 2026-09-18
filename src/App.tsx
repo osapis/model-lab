@@ -304,14 +304,6 @@ function RunState({ run, loadError }: { run: Run; loadError?: string }) {
   return <div className={`run-state ${run.status}`} role="status">{active ? <LoaderCircle size={26} className="spinning" /> : <Activity size={26} />}<strong>{statusNames[run.status]}</strong><p>{run.error || (run.status === 'queued' ? '等待执行。' : run.status === 'running' ? '正在等待接口返回。' : run.status === 'cancelled' ? '本次测试已取消，没有完成的模型输出。' : '接口未返回可用结果。')}</p>{active && <p>{loadError ? `状态更新失败：${loadError}。请刷新页面重试。` : '此处会自动更新测试状态。'}</p>}</div>;
 }
 
-function AnswerBadge({ verdict }: { verdict: 'correct' | 'incorrect' }) {
-  const correct = verdict === 'correct';
-  return <span className={`answer-verdict ${verdict}`} title={correct ? '提取的数字与标准答案一致' : '提取的数字与标准答案不一致'}>
-    {correct ? <Check size={12} aria-hidden="true" /> : <X size={12} aria-hidden="true" />}
-    {correct ? '逻辑推理正确' : '逻辑推理错误'}
-  </span>;
-}
-
 function ResultCard({ run: metadata, selected, onOpen, onCompare, onResultChanged }: { run: Run; selected: boolean; onOpen: () => void; onCompare: () => void; onResultChanged: () => void }) {
   const { ref, visible } = useVisible();
   const { run, loading, error, hydrated } = useArtifact(metadata, visible);
@@ -350,7 +342,7 @@ function ResultCard({ run: metadata, selected, onOpen, onCompare, onResultChange
       <div className="result-provider-heading"><span className={`provider-caption ${run.source}`}>{run.source === 'sample' ? '会话样例 · 非 API 实测' : 'API 接口'}</span><span className={`status-pill ${run.status}`}><span />{statusNames[run.status]}</span></div>
       <div className="result-title-line"><h3 className="provider-name"><button onClick={onOpen}>{run.source === 'sample' ? '会话子代理样例' : run.providerName || '未命名接口'}</button></h3></div>
       <div className="result-model-time"><div className="result-model-info"><div className="model-line"><span className="model-avatar">{run.source === 'sample' ? <Sparkles size={12} /> : <Cpu size={12} />}</span><strong>{run.modelName}</strong>{run.modelSlug && run.modelSlug !== run.modelName && <span className="model-slug">{run.modelSlug}</span>}</div><div className="model-reasoning" title={`思考强度：${run.parameters.reasoningEffort?.trim() || '未记录'}`}><span>思考强度</span><strong>{run.parameters.reasoningEffort?.trim() || '未记录'}</strong></div></div><TestTimestamp run={run} /></div>
-      <div className="result-prompt-row"><h4 className="result-prompt-title">{run.promptTitle}</h4><RetryInfo run={run} compact /></div>{gradedVerdict && <AnswerBadge verdict={gradedVerdict} />}
+      <div className="result-prompt-row"><h4 className="result-prompt-title">{run.promptTitle}</h4><RetryInfo run={run} compact /></div>
       <div className="card-metrics"><span className="run-duration" title={`耗时 ${time(run.latencyMs)}`}><Clock3 size={13} aria-hidden="true" /><span className="metric-label">耗时</span><strong>{time(run.latencyMs)}</strong></span><span className="token-metric" title={`输出 Token：${run.outputTokens ?? '未记录'}`}><Braces size={13} aria-hidden="true" /><span>{run.outputTokens === null ? '—' : run.outputTokens.toLocaleString()}<span className="metric-unit"> tokens</span></span></span></div>
     </div>
     <div className="result-card-footer"><button className={`compare-checkbox ${selected ? 'checked' : ''}`} aria-pressed={selected} onClick={onCompare}><span>{selected && <Check size={11} />}</span>加入对比</button><button className="open-result" onClick={onOpen}>查看结果 <ArrowUpRight size={15} /></button></div>
